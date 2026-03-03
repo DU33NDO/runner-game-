@@ -10,26 +10,169 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
+      background: #1a1a2e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: none;
-      -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
     }
-    #game-container {
-      width: 100%;
-      height: 100%;
+
+    /* Device selector bar */
+    #device-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px;
+      background: #16213e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      z-index: 100;
+      border-bottom: 1px solid #0f3460;
+      padding: 0 12px;
+    }
+    #device-bar button {
+      padding: 6px 14px;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      background: #1a1a2e;
+      color: #a8b2d1;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    #device-bar button:hover {
+      background: #0f3460;
+      color: #fff;
+    }
+    #device-bar button.active {
+      background: #e94560;
+      color: #fff;
+      border-color: #e94560;
+    }
+
+    /* Device frame */
+    #device-wrapper {
+      position: fixed;
+      top: 48px;
+      left: 0;
+      right: 0;
+      bottom: 0;
       display: flex;
       justify-content: center;
       align-items: center;
     }
-    canvas {
+    #device-frame {
+      position: relative;
+      background: #000;
+      border-radius: 40px;
+      padding: 12px;
+      box-shadow: 0 0 0 3px #333, 0 0 0 6px #111, 0 20px 60px rgba(0,0,0,0.5);
+      transition: width 0.3s, height 0.3s;
+      overflow: hidden;
+    }
+    #device-frame::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 5px;
+      background: #222;
+      border-radius: 3px;
+      z-index: 10;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      border-radius: 28px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game-container canvas {
       display: block;
     }
+
+    /* Fullscreen mode - no device frame */
+    body.fullscreen #device-bar { display: none; }
+    body.fullscreen #device-wrapper { top: 0; }
+    body.fullscreen #device-frame {
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    body.fullscreen #device-frame::before { display: none; }
+    body.fullscreen #game-container { border-radius: 0; }
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="device-bar">
+    <button data-device="iphone16" class="active">iPhone 16</button>
+    <button data-device="iphone16pro">iPhone 16 Pro Max</button>
+    <button data-device="pixel9">Pixel 9</button>
+    <button data-device="galaxys24">Galaxy S24</button>
+    <button data-device="ipad">iPad</button>
+    <button data-device="fullscreen">Fullscreen</button>
+  </div>
+  <div id="device-wrapper">
+    <div id="device-frame">
+      <div id="game-container"></div>
+    </div>
+  </div>
+
+  <script>
+    const devices = {
+      iphone16:      { w: 393, h: 852, label: 'iPhone 16' },
+      iphone16pro:   { w: 430, h: 932, label: 'iPhone 16 Pro Max' },
+      pixel9:        { w: 412, h: 923, label: 'Pixel 9' },
+      galaxys24:     { w: 360, h: 780, label: 'Galaxy S24' },
+      ipad:          { w: 820, h: 1180, label: 'iPad' },
+    };
+
+    function setDevice(key) {
+      document.body.classList.remove('fullscreen');
+      const btns = document.querySelectorAll('#device-bar button');
+      btns.forEach(b => b.classList.remove('active'));
+      const activeBtn = document.querySelector(`[data-device="${key}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      if (key === 'fullscreen') {
+        document.body.classList.add('fullscreen');
+        return;
+      }
+
+      const d = devices[key];
+      if (!d) return;
+
+      const frame = document.getElementById('device-frame');
+      const available = window.innerHeight - 48 - 40; // bar + padding
+      const scale = Math.min(1, available / (d.h + 24));
+
+      frame.style.width = (d.w + 24) * scale + 'px';
+      frame.style.height = (d.h + 24) * scale + 'px';
+    }
+
+    document.getElementById('device-bar').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (btn) setDevice(btn.dataset.device);
+    });
+
+    window.addEventListener('resize', () => {
+      const active = document.querySelector('#device-bar button.active');
+      if (active) setDevice(active.dataset.device);
+    });
+
+    // Set default device
+    setDevice('iphone16');
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

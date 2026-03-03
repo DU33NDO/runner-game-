@@ -2,23 +2,71 @@ import * as PIXI from 'pixi.js';
 import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from './constants';
 import type { Game } from './game';
 
+/** Draw a 3D orange button with text */
+function create3DButton(label: string, w: number, h: number): PIXI.Container {
+  const btn = new PIXI.Container();
+
+  // Bottom shadow (darker orange) — gives 3D depth
+  const shadow = new PIXI.Graphics();
+  shadow.beginFill(0xb35900);
+  shadow.drawRoundedRect(0, 6, w, h, 12);
+  shadow.endFill();
+  btn.addChild(shadow);
+
+  // Main button face (orange)
+  const face = new PIXI.Graphics();
+  face.beginFill(0xff7b00);
+  face.drawRoundedRect(0, 0, w, h, 12);
+  face.endFill();
+  btn.addChild(face);
+
+  // Top highlight (lighter orange, half height)
+  const highlight = new PIXI.Graphics();
+  highlight.beginFill(0xff9f40, 0.5);
+  highlight.drawRoundedRect(3, 2, w - 6, h * 0.45, 10);
+  highlight.endFill();
+  btn.addChild(highlight);
+
+  // Label text
+  const text = new PIXI.Text(label, {
+    fontSize: Math.round(h * 0.42),
+    fontWeight: 'bold',
+    fill: 0xffffff,
+    fontFamily: 'Arial',
+    dropShadow: true,
+    dropShadowColor: 0x7a3d00,
+    dropShadowDistance: 1,
+    dropShadowBlur: 0,
+  });
+  text.anchor.set(0.5, 0.5);
+  text.x = w / 2;
+  text.y = h / 2;
+  btn.addChild(text);
+
+  // Set pivot to center for scaling
+  btn.pivot.set(w / 2, h / 2);
+
+  btn.eventMode = 'static';
+  btn.cursor = 'pointer';
+
+  return btn;
+}
+
 export class UIManager {
   parent: PIXI.Container;
   game: Game;
 
-  // HUD
   heartsContainer!: PIXI.Container;
   heartSprites: PIXI.Sprite[] = [];
   scoreContainer!: PIXI.Container;
   scoreText!: PIXI.Text;
 
-  // Footer
   footerContainer!: PIXI.Container;
-  installBtn!: PIXI.Sprite;
-  installBtnScale = 1;
-  installBtnGrowing = true;
+  downloadBtn!: PIXI.Container;
+  downloadBtnBaseScale = 1;
+  downloadBtnScale = 1;
+  downloadBtnGrowing = true;
 
-  // Overlays
   introContainer!: PIXI.Container;
   failContainer!: PIXI.Container;
   endContainer!: PIXI.Container;
@@ -32,7 +80,7 @@ export class UIManager {
   }
 
   private createHUD() {
-    // Hearts - top left using heart.png
+    // Hearts - top left
     this.heartsContainer = new PIXI.Container();
     this.heartsContainer.x = 12;
     this.heartsContainer.y = 12;
@@ -83,21 +131,13 @@ export class UIManager {
     footerSprite.y = GAME_HEIGHT - 80;
     this.footerContainer.addChild(footerSprite);
 
-    // Install button (gold 3D from InstallButton.png)
-    const btnTex = PIXI.Assets.get('installButton') as PIXI.Texture;
-    this.installBtn = new PIXI.Sprite(btnTex);
-    this.installBtn.anchor.set(0.5, 0.5);
-    this.installBtn.scale.set(0.45);
-    this.installBtn.x = GAME_WIDTH - 90;
-    this.installBtn.y = GAME_HEIGHT - 40;
+    // 3D orange "Download" button on right side of footer
+    this.downloadBtn = create3DButton('Download', 130, 44);
+    this.downloadBtn.x = GAME_WIDTH - 80;
+    this.downloadBtn.y = GAME_HEIGHT - 40;
+    this.downloadBtn.on('pointerdown', () => console.log('Download clicked'));
 
-    this.installBtn.eventMode = 'static';
-    this.installBtn.cursor = 'pointer';
-    this.installBtn.on('pointerdown', () => {
-      console.log('Install clicked');
-    });
-
-    this.footerContainer.addChild(this.installBtn);
+    this.footerContainer.addChild(this.downloadBtn);
     this.parent.addChild(this.footerContainer);
   }
 
@@ -117,7 +157,7 @@ export class UIManager {
     cursorSprite.anchor.set(0.5, 0.5);
     cursorSprite.x = GAME_WIDTH / 2;
     cursorSprite.y = GAME_HEIGHT / 2 - 50;
-    cursorSprite.scale.set(0.12);
+    cursorSprite.scale.set(0.8);
     this.introContainer.addChild(cursorSprite);
 
     const tapText = new PIXI.Text('Tap to start earning!', {
@@ -213,16 +253,11 @@ export class UIManager {
     scoreText.y = GAME_HEIGHT / 2;
     this.endContainer.addChild(scoreText);
 
-    // Big install button
-    const btnTex = PIXI.Assets.get('installButton') as PIXI.Texture;
-    const bigBtn = new PIXI.Sprite(btnTex);
-    bigBtn.anchor.set(0.5, 0.5);
-    bigBtn.scale.set(0.7);
+    // Big 3D orange "Download Now!" button on end screen
+    const bigBtn = create3DButton('Download Now!', 240, 56);
     bigBtn.x = GAME_WIDTH / 2;
     bigBtn.y = GAME_HEIGHT / 2 + 70;
-    bigBtn.eventMode = 'static';
-    bigBtn.cursor = 'pointer';
-    bigBtn.on('pointerdown', () => console.log('Install clicked'));
+    bigBtn.on('pointerdown', () => console.log('Download clicked'));
     this.endContainer.addChild(bigBtn);
   }
 
@@ -237,14 +272,14 @@ export class UIManager {
   }
 
   update(dt: number) {
-    // Pulsing install button: small -> big -> small
-    if (this.installBtnGrowing) {
-      this.installBtnScale += 0.008 * dt;
-      if (this.installBtnScale >= 1.15) this.installBtnGrowing = false;
+    // Pulsing download button: small -> big -> small
+    if (this.downloadBtnGrowing) {
+      this.downloadBtnScale += 0.008 * dt;
+      if (this.downloadBtnScale >= 1.2) this.downloadBtnGrowing = false;
     } else {
-      this.installBtnScale -= 0.008 * dt;
-      if (this.installBtnScale <= 0.85) this.installBtnGrowing = true;
+      this.downloadBtnScale -= 0.008 * dt;
+      if (this.downloadBtnScale <= 0.85) this.downloadBtnGrowing = true;
     }
-    this.installBtn.scale.set(0.45 * this.installBtnScale);
+    this.downloadBtn.scale.set(this.downloadBtnScale);
   }
 }

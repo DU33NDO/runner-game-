@@ -18,7 +18,7 @@ import endBackgroundUrl from '../assets/end_background.png?url';
 import aftergameIconUrl from '../assets/aftergame icon.png?url';
 import finishUrl from '../assets/finish.png?url';
 import heartUrl from '../assets/heart.png?url';
-import installButtonUrl from '../assets/InstallButton.png?url';
+// InstallButton.png available but not imported (using drawn 3D button instead)
 import lenta1Url from '../assets/lenta_1.png?url';
 import lenta2Url from '../assets/lenta_2.png?url';
 
@@ -50,7 +50,6 @@ export const ASSETS: Record<string, string> = {
   aftergameIcon: aftergameIconUrl,
   finish: finishUrl,
   heart: heartUrl,
-  installButton: installButtonUrl,
   lenta1: lenta1Url,
   lenta2: lenta2Url,
   playerAtlas: playerAtlasUrl,

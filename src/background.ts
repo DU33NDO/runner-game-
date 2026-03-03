@@ -1,5 +1,5 @@
-import * as PIXI from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT, GROUND_Y } from './constants';
+import * as PIXI from "pixi.js";
+import { GAME_WIDTH, GAME_HEIGHT, GROUND_Y } from "./constants";
 
 interface ScrollingLayer {
   sprites: PIXI.Sprite[];
@@ -8,32 +8,42 @@ interface ScrollingLayer {
 
 export function createScrollingBackground(parent: PIXI.Container) {
   // Main background - sky and ground (tiles horizontally)
-  const bgTexture = PIXI.Assets.get('background') as PIXI.Texture;
-  const bgLayer = createTilingLayer(parent, bgTexture, GAME_HEIGHT * 0.6, 0.3, 0);
+  const bgTexture = PIXI.Assets.get("background") as PIXI.Texture;
+  const bgLayer = createTilingLayer(parent, bgTexture, GAME_HEIGHT, 0.3, 0);
+  bgLayer.scale.x = -1;
+  bgLayer.x = GAME_HEIGHT; // reposition since flipping moves it offscreen
 
   // Ground line
   const groundLine = new PIXI.Graphics();
-  groundLine.beginFill(0x8ba86e);
   groundLine.drawRect(0, GROUND_Y, GAME_WIDTH, 4);
   groundLine.endFill();
   // Ground fill below
-  groundLine.beginFill(0x7a9960);
   groundLine.drawRect(0, GROUND_Y + 4, GAME_WIDTH, GAME_HEIGHT - GROUND_Y);
   groundLine.endFill();
   parent.addChild(groundLine);
 
   // Decorative layers - bushes and trees at varying parallax
-  const bush1 = PIXI.Assets.get('bush1') as PIXI.Texture;
-  const bush2 = PIXI.Assets.get('bush2') as PIXI.Texture;
-  const bush3 = PIXI.Assets.get('bush3') as PIXI.Texture;
-  const tree1 = PIXI.Assets.get('tree1') as PIXI.Texture;
-  const tree2 = PIXI.Assets.get('tree2') as PIXI.Texture;
-  const lampTex = PIXI.Assets.get('lamp') as PIXI.Texture;
+  const bush1 = PIXI.Assets.get("bush1") as PIXI.Texture;
+  const bush2 = PIXI.Assets.get("bush2") as PIXI.Texture;
+  const bush3 = PIXI.Assets.get("bush3") as PIXI.Texture;
+  const tree1 = PIXI.Assets.get("tree1") as PIXI.Texture;
+  const tree2 = PIXI.Assets.get("tree2") as PIXI.Texture;
+  const lampTex = PIXI.Assets.get("lamp") as PIXI.Texture;
 
   // Place decorations
-  const decorations: { sprite: PIXI.Sprite; speedMul: number; baseX: number }[] = [];
+  const decorations: {
+    sprite: PIXI.Sprite;
+    speedMul: number;
+    baseX: number;
+  }[] = [];
 
-  function addDecor(tex: PIXI.Texture, x: number, y: number, scale: number, speedMul: number) {
+  function addDecor(
+    tex: PIXI.Texture,
+    x: number,
+    y: number,
+    scale: number,
+    speedMul: number,
+  ) {
     const s = new PIXI.Sprite(tex);
     s.anchor.set(0.5, 1);
     s.x = x;
@@ -83,7 +93,7 @@ function createTilingLayer(
   texture: PIXI.Texture,
   height: number,
   _speedMul: number,
-  yPos: number
+  yPos: number,
 ): PIXI.TilingSprite {
   const tiling = new PIXI.TilingSprite(texture, GAME_WIDTH, height);
   tiling.y = yPos;

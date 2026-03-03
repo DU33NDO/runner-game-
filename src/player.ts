@@ -28,8 +28,8 @@ export class Player {
     this.sprite.animationSpeed = 0.15;
     this.sprite.play();
 
-    // Scale to game size (~120px tall)
-    const targetHeight = 120;
+    // Scale to game size
+    const targetHeight = 170;
     const frameH = this.idleFrames[0]?.height || 350;
     const scale = targetHeight / frameH;
     this.sprite.scale.set(scale);

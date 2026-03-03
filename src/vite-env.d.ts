@@ -9,3 +9,8 @@ declare module '*.webp?url' {
   const src: string;
   export default src;
 }
+
+declare module '*.plist?raw' {
+  const content: string;
+  export default content;
+}

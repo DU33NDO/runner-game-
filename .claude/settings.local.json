@@ -11,7 +11,8 @@
       "Bash(npx vite build)",
       "WebFetch(domain:localhost)",
       "Bash(ls:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

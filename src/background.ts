@@ -112,9 +112,11 @@ export function createScrollingBackground(
     const isLandscape = GAME_WIDTH > GAME_HEIGHT;
     const isPhone = GAME_HEIGHT < 500; // phones in landscape are short (<500px tall)
     const bgOffsetY = !isLandscape ? -20 : isPhone ? -150 : -20;
-    bgLayer.y      = bgOffsetY;
-    bgLayer.width  = GAME_WIDTH;
-    bgLayer.height = GAME_HEIGHT - bgOffsetY; // extend to fill any gap from y offset
+    bgLayer.y = bgOffsetY;
+    bgLayer.width = GAME_WIDTH;
+    bgLayer.height = GAME_HEIGHT - bgOffsetY;
+    // Shift tile so the background road (visual offset 600px from origin) tracks GROUND_Y
+    bgLayer.tilePosition.y = GROUND_Y - bgOffsetY - 600;
     bgLayer.tileScale.set(
       !isLandscape
         ? 0.9 // portrait scale

@@ -367,16 +367,18 @@ export class Game {
   createFinishLineWorld(): PIXI.Container {
     const c = new PIXI.Container();
 
-    const POLE_H    = 110;
-    const HALF_SPAN = 38;
+    const sc        = gameScale();
+    const POLE_H    = Math.round(110 * sc);
+    const HALF_SPAN = Math.round(38  * sc);
     const groundY   = GROUND_Y - 20;
     const topY      = groundY - POLE_H;
 
     // Silver poles
+    const poleW = Math.max(4, Math.round(10 * sc));
     for (const px of [-HALF_SPAN, HALF_SPAN]) {
       const pole = new PIXI.Graphics();
       pole.beginFill(0xbbbbbb);
-      pole.drawRect(px - 5, topY, 10, POLE_H);
+      pole.drawRect(px - poleW / 2, topY, poleW, POLE_H);
       pole.endFill();
       c.addChild(pole);
     }
@@ -433,7 +435,7 @@ export class Game {
 
       // Free ends lerp to a natural hang position — no runaway velocity
       let cY = pts[MID].y;
-      const targetY = topY + 55;
+      const targetY = topY + Math.round(55 * sc);
 
       let elapsed = 0;
       const fallTick = (dt: number) => {
@@ -442,7 +444,7 @@ export class Game {
 
         gfx.clear();
         gfx.alpha = elapsed > 30 ? Math.max(0, 1 - (elapsed - 30) / 50) : 1;
-        gfx.lineStyle(7, 0xee1111, 1);
+        gfx.lineStyle(Math.max(3, Math.round(7 * sc)), 0xee1111, 1);
 
         // Left piece: pinned at left pole top, free end droops to center
         gfx.moveTo(-HALF_SPAN, topY);

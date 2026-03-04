@@ -150,6 +150,27 @@
     }
     #game-container canvas { display: block; }
 
+    /* ── VIEWABLE OVERLAY ───────────────────────────────────────────── */
+    #ad-overlay {
+      position: absolute; inset: 0; z-index: 100;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(0,0,0,0.45);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; border-radius: inherit;
+      pointer-events: all;
+    }
+    #ad-overlay svg { width: 52px; height: 52px; color: #fff; opacity: 0.95; }
+    #ad-overlay .ad-title {
+      font-size: 20px; font-weight: 700; color: #fff;
+      letter-spacing: .02em;
+    }
+    #ad-overlay .ad-sub {
+      font-size: 13px; color: rgba(255,255,255,0.7);
+      text-align: center; line-height: 1.5;
+    }
+
     /* ── MOBILE USER — fullscreen, no toolbar ───────────────────────── */
     body.is-mobile #toolbar { display: none; }
     body.is-mobile #stage   { bottom: 0; }
@@ -309,10 +330,23 @@
 
     function setViewable(on) {
       viewable = on;
-      frame.classList.toggle('with-bezel', on);
-      frame.classList.toggle('no-bezel',  !on);
       document.getElementById('btn-view').classList.toggle('active', on);
-      applyDevice(currentKey);
+
+      const existing = document.getElementById('ad-overlay');
+      if (!on && !existing) {
+        const ov = document.createElement('div');
+        ov.id = 'ad-overlay';
+        ov.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <div class="ad-title">Ad paused</div>
+          <div class="ad-sub">Toggle visibility<br>to resume</div>`;
+        gameContainer.appendChild(ov);
+      } else if (on && existing) {
+        existing.remove();
+      }
     }
 
     // ── Dropdown ──────────────────────────────────────────────────────────────

@@ -42,7 +42,7 @@ export const TRIANGLE_INTERVAL_MAX = 350;
 
 // Game
 export const MAX_LIVES = 3;
-export const FINISH_DISTANCE = 8000;
+export const FINISH_DISTANCE = 4000;
 export const COLLECTIBLE_VALUE = 10;
 
 /** Call whenever the canvas dimensions change. */

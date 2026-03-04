@@ -29,6 +29,7 @@ export class UIManager {
   // Refs for resize
   private headerSprite!: PIXI.Sprite;
   private footerSprite!: PIXI.Sprite;
+  private footerBg!: PIXI.Graphics;
   private footerH = 0;
   private introBg!: PIXI.Graphics;
   private failBg!: PIXI.Graphics;
@@ -120,6 +121,9 @@ export class UIManager {
     const footerTex = PIXI.Assets.get("footer") as PIXI.Texture;
     const footerAspect = footerTex.width / footerTex.height;
 
+    this.footerBg = new PIXI.Graphics();
+    this.footerContainer.addChild(this.footerBg);
+
     this.footerSprite = new PIXI.Sprite(footerTex);
     this.footerSprite.anchor.set(0.5, 1);
     this.footerSprite.width = GAME_WIDTH;
@@ -129,11 +133,12 @@ export class UIManager {
     this.footerSprite.y = GAME_HEIGHT;
     this.footerContainer.addChild(this.footerSprite);
 
-    this.downloadBtn = create3DButton("Download", 110, 36);
-    this.downloadBtn.x = GAME_WIDTH - 70;
-    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2;
+    this.downloadBtn = create3DButton("Download", 140, 46);
+    this.downloadBtn.x = GAME_WIDTH - 55;
+    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
     this.downloadBtn.on("pointerdown", () => console.log("Download clicked"));
     this.footerContainer.addChild(this.downloadBtn);
+    this.downloadBtnBaseScale = 0.82;
 
     // Pulse from the very start (independent of game state)
     PIXI.Ticker.shared.add((dt: number) => {
@@ -197,8 +202,14 @@ export class UIManager {
     let cursorDir = 1;
     this.cursorTicker = (dt: number) => {
       cursorPulseScale += 0.005 * dt * cursorDir;
-      if (cursorPulseScale >= 0.7) { cursorPulseScale = 0.7; cursorDir = -1; }
-      if (cursorPulseScale <= 0.5) { cursorPulseScale = 0.5; cursorDir = 1; }
+      if (cursorPulseScale >= 0.7) {
+        cursorPulseScale = 0.7;
+        cursorDir = -1;
+      }
+      if (cursorPulseScale <= 0.5) {
+        cursorPulseScale = 0.5;
+        cursorDir = 1;
+      }
       this.cursorSprite.scale.set(cursorPulseScale);
     };
     PIXI.Ticker.shared.add(this.cursorTicker);
@@ -243,7 +254,9 @@ export class UIManager {
 
   // ── Resize ──────────────────────────────────────────────────────────────────
   resize() {
-    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } = this;
+    const isLandscape = GAME_WIDTH > GAME_HEIGHT;
+    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } =
+      this;
     const centerY = HUD_MT + Math.max(heartH, headerH) / 2;
 
     this.heartsContainer.x = HUD_ML;
@@ -253,15 +266,40 @@ export class UIManager {
     this.scoreText.x = GAME_WIDTH - HUD_MR - INNER_PAD;
     this.scoreText.y = centerY;
 
-    const aspect = this.footerSprite.texture.width / this.footerSprite.texture.height;
-    this.footerSprite.width = GAME_WIDTH;
-    this.footerSprite.height = GAME_WIDTH / aspect;
-    this.footerH = this.footerSprite.height;
-    this.footerSprite.x = GAME_WIDTH / 2;
+    const aspect =
+      this.footerSprite.texture.width / this.footerSprite.texture.height;
+    const footerH = isLandscape
+      ? GAME_HEIGHT * 0.18 // landscape: fixed height, no stretch
+      : GAME_WIDTH / aspect; // portrait: span full width
+    const footerW = isLandscape
+      ? footerH * aspect // landscape: maintain aspect ratio
+      : GAME_WIDTH;
+    this.footerSprite.width = footerW;
+    this.footerSprite.height = footerH;
+    this.footerH = footerH;
     this.footerSprite.y = GAME_HEIGHT;
-    this.downloadBtn.x = GAME_WIDTH - 70;
-    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2;
-    this.downloadBtnBaseScale = Math.min(0.75, Math.max(0.45, (GAME_HEIGHT / 800) * 0.75));
+
+    this.footerBg.clear();
+    if (isLandscape) {
+      // Image flush-left, purple fills the rest (slightly shorter than image)
+      this.footerSprite.anchor.set(0, 1);
+      this.footerSprite.x = 0;
+      const bgH = footerH * 0.75;
+      this.footerBg.beginFill(0x975cfd);
+      this.footerBg.drawRect(0, GAME_HEIGHT - bgH, GAME_WIDTH, bgH);
+      this.footerBg.endFill();
+      this.downloadBtn.x = GAME_WIDTH - 55;
+    } else {
+      // Portrait: image centered, no bg fill
+      this.footerSprite.anchor.set(0.5, 1);
+      this.footerSprite.x = GAME_WIDTH / 2;
+      this.downloadBtn.x = GAME_WIDTH - 55;
+    }
+    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
+    const isTablet = GAME_WIDTH > 560;
+    this.downloadBtnBaseScale = isTablet
+      ? Math.min(1.3, Math.max(1.0, (GAME_HEIGHT / 800) * 1.2))
+      : Math.min(0.9, Math.max(0.6, (GAME_HEIGHT / 800) * 0.85));
 
     this.introBg.clear();
     this.introBg.beginFill(0x000000, 0.3);
@@ -273,6 +311,10 @@ export class UIManager {
     this.failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.failBg.endFill();
 
+    this.tapText.text = isLandscape
+      ? "Tap to start earning!"
+      : "Tap to start\nearning!";
+    this.tapText.style.fontSize = isLandscape ? 50 : 20;
     this.tapText.x = GAME_WIDTH / 2;
     this.tapText.y = GAME_HEIGHT / 2 - 10;
     this.cursorSprite.x = GAME_WIDTH / 2;
@@ -370,12 +412,95 @@ export class UIManager {
   }
 
   showFinish() {
-    const s = new PIXI.Sprite(PIXI.Assets.get("finish") as PIXI.Texture);
-    s.anchor.set(0.5, 0.5);
-    s.x = GAME_WIDTH / 2;
-    s.y = GAME_HEIGHT / 2 - 50;
-    s.scale.set(0.6);
-    this.parent.addChild(s);
+    // intentionally empty — end screen handles the win display
+  }
+
+  showComboText() {
+    const WORDS = ["Great!", "Awesome!", "Fantastic!"];
+    const word = WORDS[Math.floor(Math.random() * WORDS.length)];
+
+    const text = new PIXI.Text(word, {
+      fontSize: 30,
+      fontWeight: "bold",
+      fontFamily: "GameFont, sans-serif",
+      fill: 0xffffff,
+      stroke: 0x000000,
+      strokeThickness: 6,
+    });
+    text.anchor.set(0.5, 0.5);
+    text.x = GAME_WIDTH / 2;
+    text.y = GAME_HEIGHT / 2 - 60;
+    this.parent.addChild(text);
+
+    let elapsed = 0;
+    const tick = () => {
+      elapsed++;
+      text.y -= 0.5;
+      if (elapsed > 40) text.alpha = 1 - (elapsed - 40) / 30;
+      if (elapsed >= 70) {
+        PIXI.Ticker.shared.remove(tick);
+        this.parent.removeChild(text);
+        text.destroy();
+      }
+    };
+    PIXI.Ticker.shared.add(tick);
+  }
+
+  showConfetti() {
+    const COLORS = [
+      0xff3333, 0x33cc33, 0x3399ff, 0xffdd00, 0xff66cc, 0x00eeff, 0xff8800,
+    ];
+    const COUNT = 70;
+
+    type Piece = {
+      g: PIXI.Graphics;
+      vx: number;
+      vy: number;
+      vr: number;
+      grav: number;
+    };
+    const pieces: Piece[] = [];
+
+    for (let i = 0; i < COUNT; i++) {
+      const g = new PIXI.Graphics();
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const w = 6 + Math.random() * 7;
+      const h = 10 + Math.random() * 7;
+      g.beginFill(color);
+      g.drawRect(-w / 2, -h / 2, w, h);
+      g.endFill();
+      g.x = Math.random() * GAME_WIDTH;
+      g.y = -20 - Math.random() * GAME_HEIGHT * 0.4;
+      g.rotation = Math.random() * Math.PI * 2;
+      this.parent.addChild(g);
+      pieces.push({
+        g,
+        vx: (Math.random() - 0.5) * 3,
+        vy: 1.5 + Math.random() * 3,
+        vr: (Math.random() - 0.5) * 0.18,
+        grav: 0.04 + Math.random() * 0.04,
+      });
+    }
+
+    let elapsed = 0;
+    const tick = (dt: number) => {
+      elapsed += dt;
+      for (const p of pieces) {
+        p.vy += p.grav * dt;
+        p.g.x += p.vx * dt;
+        p.g.y += p.vy * dt;
+        p.g.rotation += p.vr * dt;
+        if (elapsed > 150) p.g.alpha = Math.max(0, 1 - (elapsed - 150) / 90);
+      }
+      if (elapsed > 240) {
+        PIXI.Ticker.shared.remove(tick);
+        for (const p of pieces) {
+          this.parent.removeChild(p.g);
+          p.g.destroy();
+        }
+      }
+    };
+    PIXI.Ticker.shared.add(tick);
   }
 
   showEnd(score: number, won: boolean) {
@@ -424,8 +549,14 @@ export class UIManager {
     let pulseDir = 1;
     this.tutorialCursorTicker = (dt: number) => {
       pulseScale += 0.005 * dt * pulseDir;
-      if (pulseScale >= 0.6) { pulseScale = 0.6; pulseDir = -1; }
-      if (pulseScale <= 0.4) { pulseScale = 0.4; pulseDir = 1; }
+      if (pulseScale >= 0.6) {
+        pulseScale = 0.6;
+        pulseDir = -1;
+      }
+      if (pulseScale <= 0.4) {
+        pulseScale = 0.4;
+        pulseDir = 1;
+      }
       cursor.scale.set(pulseScale);
     };
     PIXI.Ticker.shared.add(this.tutorialCursorTicker);

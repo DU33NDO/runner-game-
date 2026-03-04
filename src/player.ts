@@ -1,6 +1,8 @@
 import * as PIXI from "pixi.js";
 import {
   GROUND_Y,
+  GAME_WIDTH,
+  GAME_HEIGHT,
   GRAVITY,
   JUMP_FORCE,
   PLAYER_ANIMS,
@@ -51,6 +53,8 @@ export class Player {
 
   resize() {
     this.applyScale();
+    const isLandscape = GAME_WIDTH > GAME_HEIGHT;
+    this.container.x = isLandscape ? 300 : 70; // ← landscape x | portrait x
     if (this.isGrounded) this.container.y = GROUND_Y + 40;
   }
 
@@ -92,7 +96,8 @@ export class Player {
     this.isRunning = false;
     this.isBlinking = false;
     this.sprite.onComplete = undefined;
-    const frames = this.standFrames.length > 0 ? this.standFrames : this.idleFrames;
+    const frames =
+      this.standFrames.length > 0 ? this.standFrames : this.idleFrames;
     this.sprite.textures = frames;
     this.sprite.animationSpeed = 0.08;
     this.sprite.loop = true;

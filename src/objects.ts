@@ -32,20 +32,20 @@ export function spawnCone(parent: PIXI.Container): GameObject {
   container.addChild(cone);
 
   // EVADE label above the cone
-  const EVADE_W = 64;
-  const EVADE_H = 22;
+  const EVADE_W = 88;
+  const EVADE_H = 26;
   const coneVisualH = coneTex.height * coneScale;
 
   const evadeBtn = new PIXI.Container();
   const evadeBg = new PIXI.Graphics();
   evadeBg.lineStyle(2, 0x000000, 1);
   evadeBg.beginFill(0xffdd00);
-  evadeBg.drawRoundedRect(-EVADE_W / 2, -EVADE_H / 2, EVADE_W, EVADE_H, 5);
+  evadeBg.drawRoundedRect(-EVADE_W / 2, -EVADE_H / 2, EVADE_W, EVADE_H, 6);
   evadeBg.endFill();
   evadeBtn.addChild(evadeBg);
 
   const evadeText = new PIXI.Text('EVADE', {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
     fill: 0xdd0000,
     fontFamily: 'GameFont, sans-serif',
@@ -55,7 +55,7 @@ export function spawnCone(parent: PIXI.Container): GameObject {
   evadeText.anchor.set(0.5, 0.5);
   evadeBtn.addChild(evadeText);
 
-  const evadeBaseY = -(coneVisualH + EVADE_H / 2 + 8);
+  const evadeBaseY = -(coneVisualH + EVADE_H / 2 + 22);
   evadeBtn.y = evadeBaseY;
   container.addChild(evadeBtn);
 

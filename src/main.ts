@@ -3,6 +3,9 @@ import { ASSETS, playerPlistRaw, enemyPlistRaw } from './assets';
 import { GAME_WIDTH, GAME_HEIGHT, setGameSize } from './constants';
 import { createSpritesheetFromPlist } from './spritesheet';
 import { Game } from './game';
+import { setMuted } from './sound';
+
+(window as any).__muteGame = setMuted;
 
 async function init() {
   const container = document.getElementById('game-container')!;

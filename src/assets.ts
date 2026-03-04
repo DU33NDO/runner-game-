@@ -21,6 +21,7 @@ import heartUrl from '../assets/heart.png?url';
 // InstallButton.png available but not imported (using drawn 3D button instead)
 import lenta1Url from '../assets/lenta_1.png?url';
 import lenta2Url from '../assets/lenta_2.png?url';
+import paypalScoreUrl from '../assets/PaypalScore.png?url';
 
 // Atlas spritesheets (top-level copies, not inside frame folders)
 import playerAtlasUrl from '../assets/player_atlas.png?url';
@@ -52,6 +53,7 @@ export const ASSETS: Record<string, string> = {
   heart: heartUrl,
   lenta1: lenta1Url,
   lenta2: lenta2Url,
+  paypalScore: paypalScoreUrl,
   playerAtlas: playerAtlasUrl,
   enemyAtlas: enemyAtlasUrl,
 };

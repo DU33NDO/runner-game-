@@ -1,6 +1,14 @@
-import * as PIXI from 'pixi.js';
-import { GROUND_Y, GRAVITY, JUMP_FORCE, PLAYER_ANIMS } from './constants';
-import { getAnimFrames } from './spritesheet';
+import * as PIXI from "pixi.js";
+import {
+  GROUND_Y,
+  GRAVITY,
+  JUMP_FORCE,
+  PLAYER_ANIMS,
+  gameScale,
+} from "./constants";
+import { getAnimFrames } from "./spritesheet";
+
+const BASE_TARGET_HEIGHT = 250; // player height at base 800px design height
 
 export class Player {
   container: PIXI.Container;
@@ -17,25 +25,32 @@ export class Player {
     this.container = new PIXI.Container();
     parent.addChild(this.container);
 
-    // Get animation frames from atlas
-    this.runFrames = getAnimFrames(sheet, 'player', PLAYER_ANIMS.run);
-    this.idleFrames = getAnimFrames(sheet, 'player', PLAYER_ANIMS.idle);
-    this.jumpFrames = getAnimFrames(sheet, 'player', PLAYER_ANIMS.jump);
+    this.runFrames = getAnimFrames(sheet, "player", PLAYER_ANIMS.run);
+    this.idleFrames = getAnimFrames(sheet, "player", PLAYER_ANIMS.idle);
+    this.jumpFrames = getAnimFrames(sheet, "player", PLAYER_ANIMS.jump);
 
-    // Create animated sprite starting with idle
     this.sprite = new PIXI.AnimatedSprite(this.idleFrames);
     this.sprite.anchor.set(0.5, 1);
     this.sprite.animationSpeed = 0.15;
     this.sprite.play();
 
-    // Scale to game size
-    const targetHeight = 170;
-    const frameH = this.idleFrames[0]?.height || 350;
-    const scale = targetHeight / frameH;
-    this.sprite.scale.set(scale);
-
     this.container.addChild(this.sprite);
     this.container.x = 100;
+
+    this.applyScale();
+  }
+
+  /** Reposition and rescale to the current GROUND_Y / gameScale. */
+  resize() {
+    this.applyScale();
+    // Snap to ground if currently grounded (don't interrupt a jump mid-air)
+    if (this.isGrounded) this.container.y = GROUND_Y;
+  }
+
+  private applyScale() {
+    const targetHeight = BASE_TARGET_HEIGHT * gameScale();
+    const frameH = this.idleFrames[0]?.height || 350;
+    this.sprite.scale.set(targetHeight / frameH);
     this.container.y = GROUND_Y;
   }
 
@@ -76,13 +91,11 @@ export class Player {
   getBounds(): { x: number; y: number; width: number; height: number } {
     const scale = this.sprite.scale.x;
     const tex = this.sprite.texture;
-    const w = tex.width * scale;
-    const h = tex.height * scale;
     return {
-      x: this.container.x - w / 2,
-      y: this.container.y - h,
-      width: w,
-      height: h,
+      x: this.container.x - (tex.width * scale) / 2,
+      y: this.container.y - tex.height * scale,
+      width: tex.width * scale,
+      height: tex.height * scale,
     };
   }
 }

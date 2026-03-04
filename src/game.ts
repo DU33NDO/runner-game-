@@ -59,8 +59,14 @@ export class Game {
     app.stage.addChild(this.uiLayer);
   }
 
+  resize() {
+    this.bgElements?.resize();
+    this.player?.resize();
+    this.ui?.resize();
+  }
+
   start() {
-    this.bgElements = createScrollingBackground(this.bgLayer);
+    this.bgElements = createScrollingBackground(this.bgLayer, this.app.renderer as PIXI.Renderer);
     this.player = new Player(this.gameLayer, this.playerSheet);
     this.ui = new UIManager(this.uiLayer, this);
 
@@ -149,6 +155,9 @@ export class Game {
         col.container.visible = false;
         this.score += COLLECTIBLE_VALUE;
         this.ui.updateScore(this.score);
+        // Fly the collected item to the PayPal badge
+        const texKey = col.type === 'dollar' ? 'dollar' : 'paypalScore';
+        this.ui.flyToScore(col.container.x, col.container.y, texKey);
       }
     }
 

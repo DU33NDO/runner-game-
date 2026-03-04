@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { GAME_WIDTH, GROUND_Y, ENEMY_ANIMS } from './constants';
+import { GAME_WIDTH, GROUND_Y, ENEMY_ANIMS, gameScale } from './constants';
 import { getAnimFrames } from './spritesheet';
 
 export interface GameObject {
@@ -61,10 +61,11 @@ export function spawnEnemy(
   animSprite.animationSpeed = 0.2;
   animSprite.play();
 
-  const targetHeight = 110;
+  const targetHeight = 110 * gameScale();
   const frameH = frames[0]?.height || 350;
   const scale = targetHeight / frameH;
   animSprite.scale.set(scale);
+  animSprite.scale.x = -scale; // face left — toward the player
 
   const container = new PIXI.Container();
   container.addChild(animSprite);

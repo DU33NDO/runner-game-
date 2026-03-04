@@ -7,172 +7,376 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #1a1a2e;
+      width: 100%; height: 100%; overflow: hidden;
+      background: #12121f;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
+      -webkit-user-select: none; user-select: none;
     }
 
-    /* Device selector bar */
-    #device-bar {
+    /* ── TOOLBAR (desktop only) ─────────────────────────────────────── */
+    #toolbar {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 48px;
+      bottom: 0; left: 0; right: 0;
+      height: 54px;
       background: #16213e;
+      border-top: 1px solid #1e3060;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      z-index: 100;
-      border-bottom: 1px solid #0f3460;
-      padding: 0 12px;
+      z-index: 200;
+      padding: 0 16px;
     }
-    #device-bar button {
-      padding: 6px 14px;
-      border: 1px solid #0f3460;
-      border-radius: 6px;
-      background: #1a1a2e;
-      color: #a8b2d1;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
+    .toolbar-divider { width: 1px; height: 28px; background: #1e3060; flex-shrink: 0; }
+
+    /* ── DROPDOWN ───────────────────────────────────────────────────── */
+    #device-dropdown-wrap { position: relative; }
+    #device-trigger {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      background: #1a1a2e; border: 1px solid #1e3060; border-radius: 8px;
+      color: #a8b2d1; font-size: 13px; cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap; min-width: 170px;
+    }
+    #device-trigger:hover { background: #0f3460; color: #fff; }
+    #device-trigger.open  { background: #0f3460; color: #fff; border-color: #3b5bdb; }
+    #device-trigger .chevron { margin-left: auto; font-size: 9px; transition: transform 0.2s; }
+    #device-trigger.open .chevron { transform: rotate(180deg); }
+
+    #device-menu {
+      display: none;
+      position: absolute; bottom: calc(100% + 8px); left: 0;
+      min-width: 210px;
+      background: #16213e; border: 1px solid #1e3060; border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.55);
+      z-index: 300;
+    }
+    #device-menu.open { display: block; }
+    .menu-group-label {
+      padding: 8px 14px 3px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: #4a5a80;
+    }
+    .menu-item {
+      padding: 8px 18px;
+      font-size: 13px; color: #a8b2d1; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .menu-item:hover  { background: #0f3460; color: #fff; }
+    .menu-item.active { background: #2d1b69; color: #c4b5fd; }
+    .menu-sep { height: 1px; background: #1e3060; margin: 4px 0; }
+
+    /* ── TOOLBAR BUTTONS ────────────────────────────────────────────── */
+    .t-btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 13px;
+      background: #1a1a2e; border: 1px solid #1e3060; border-radius: 8px;
+      color: #a8b2d1; font-size: 13px; cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
       white-space: nowrap;
     }
-    #device-bar button:hover {
-      background: #0f3460;
-      color: #fff;
-    }
-    #device-bar button.active {
-      background: #e94560;
-      color: #fff;
-      border-color: #e94560;
+    .t-btn:hover  { background: #0f3460; color: #fff; }
+    .t-btn.active { background: #2d1b69; color: #c4b5fd; border-color: #5b3ec8; }
+    .t-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* ── DEVICE STAGE ───────────────────────────────────────────────── */
+    #stage {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 54px;
+      display: flex; justify-content: center; align-items: center;
     }
 
-    /* Device frame */
-    #device-wrapper {
-      position: fixed;
-      top: 48px;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+    /* ── DEVICE FRAME ───────────────────────────────────────────────── */
     #device-frame {
       position: relative;
-      background: #000;
-      border-radius: 40px;
-      padding: 12px;
-      box-shadow: 0 0 0 3px #333, 0 0 0 6px #111, 0 20px 60px rgba(0,0,0,0.5);
-      transition: width 0.3s, height 0.3s;
-      overflow: hidden;
+      background: #111;
+      transition:
+        width  .35s cubic-bezier(.4,0,.2,1),
+        height .35s cubic-bezier(.4,0,.2,1),
+        border-radius .35s,
+        box-shadow .35s,
+        padding .35s;
+      flex-shrink: 0;
     }
-    #device-frame::before {
-      content: '';
-      position: absolute;
-      top: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 80px;
-      height: 5px;
-      background: #222;
-      border-radius: 3px;
-      z-index: 10;
-    }
-    #game-container {
-      width: 100%;
-      height: 100%;
-      border-radius: 28px;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    #game-container canvas {
-      display: block;
+    /* outer ring + shadow */
+    #device-frame.with-bezel {
+      box-shadow: 0 0 0 2px #444, 0 0 0 5px #1a1a1a, 0 28px 72px rgba(0,0,0,.7);
     }
 
-    /* Fullscreen mode - no device frame */
-    body.fullscreen #device-bar { display: none; }
-    body.fullscreen #device-wrapper { top: 0; }
-    body.fullscreen #device-frame {
-      border-radius: 0;
-      padding: 0;
-      box-shadow: none;
-      width: 100% !important;
-      height: 100% !important;
+    /* Dynamic Island / notch / hole */
+    #device-island {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      background: #000; z-index: 10; pointer-events: none;
+      transition: all .35s;
     }
-    body.fullscreen #device-frame::before { display: none; }
-    body.fullscreen #game-container { border-radius: 0; }
+    #device-island.pill   { top: 8px;  width: 90px; height: 26px; border-radius: 20px; }
+    #device-island.notch  { top: 0;    width: 120px; height: 26px; border-radius: 0 0 16px 16px; }
+    #device-island.hole   { top: 10px; width: 12px;  height: 12px; border-radius: 50%; }
+    #device-island.hidden { display: none; }
+
+    /* Side hardware buttons (decorative) */
+    .side-btn {
+      position: absolute; background: #2a2a2a; border-radius: 3px;
+      pointer-events: none;
+    }
+    #side-right { right: -4px; top: 25%; width: 4px; height: 48px; border-radius: 0 3px 3px 0; }
+    #side-left1 { left: -4px; top: 18%; width: 3px; height: 28px; border-radius: 3px 0 0 3px; }
+    #side-left2 { left: -4px; top: calc(18% + 34px); width: 3px; height: 28px; border-radius: 3px 0 0 3px; }
+    #side-left3 { left: -4px; top: calc(18% + 68px); width: 3px; height: 20px; border-radius: 3px 0 0 3px; }
+
+    /* hide side buttons in landscape or no-bezel */
+    #device-frame.landscape .side-btn,
+    #device-frame.no-bezel  .side-btn { display: none; }
+
+    /* No-bezel mode */
+    #device-frame.no-bezel {
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+    }
+    #device-frame.no-bezel #device-island { display: none; }
+    #device-frame.no-bezel #game-container { border-radius: 0 !important; }
+
+    /* Game canvas host */
+    #game-container {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #game-container canvas { display: block; }
+
+    /* ── MOBILE USER — fullscreen, no toolbar ───────────────────────── */
+    body.is-mobile #toolbar { display: none; }
+    body.is-mobile #stage   { bottom: 0; }
+    body.is-mobile #device-frame {
+      width: 100% !important; height: 100% !important;
+      padding: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+      background: #000 !important;
+    }
+    body.is-mobile #device-island,
+    body.is-mobile .side-btn { display: none; }
+    body.is-mobile #game-container { border-radius: 0; }
   </style>
 </head>
 <body>
-  <div id="device-bar">
-    <button data-device="iphone16" class="active">iPhone 16</button>
-    <button data-device="iphone16pro">iPhone 16 Pro Max</button>
-    <button data-device="pixel9">Pixel 9</button>
-    <button data-device="galaxys24">Galaxy S24</button>
-    <button data-device="ipad">iPad</button>
-    <button data-device="fullscreen">Fullscreen</button>
+
+  <!-- ── TOOLBAR ───────────────────────────────────────────────────── -->
+  <div id="toolbar">
+
+    <!-- Device dropdown -->
+    <div id="device-dropdown-wrap">
+      <button id="device-trigger" aria-haspopup="listbox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="3"/>
+        </svg>
+        <span id="device-label">iPhone 16</span>
+        <span class="chevron">▲</span>
+      </button>
+
+      <div id="device-menu" role="listbox">
+        <div class="menu-group-label">Phones</div>
+        <div class="menu-item active" data-device="iphone16">iPhone 16</div>
+        <div class="menu-item"        data-device="iphonese" >iPhone SE</div>
+        <div class="menu-item"        data-device="pixel7pro">Google Pixel 7 Pro</div>
+        <div class="menu-item"        data-device="android"  >Generic Android</div>
+        <div class="menu-sep"></div>
+        <div class="menu-group-label">Tablets</div>
+        <div class="menu-item"        data-device="ipadpro"  >iPad Pro</div>
+        <div class="menu-item"        data-device="ipadair"  >iPad Air</div>
+        <div class="menu-item"        data-device="tablet"   >Generic Tablet</div>
+      </div>
+    </div>
+
+    <!-- Orientation -->
+    <button class="t-btn" id="btn-orient">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="5" y="2" width="14" height="20" rx="2"/>
+      </svg>
+      <span>Portrait</span>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Viewable -->
+    <button class="t-btn active" id="btn-view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <span>Viewable</span>
+    </button>
+
+    <!-- Mute -->
+    <button class="t-btn" id="btn-mute">
+      <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+      </svg>
+      <span id="mute-label">Sound</span>
+    </button>
+
+    <!-- Reload -->
+    <button class="t-btn" id="btn-reload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+      </svg>
+      Reload
+    </button>
   </div>
-  <div id="device-wrapper">
-    <div id="device-frame">
+
+  <!-- ── DEVICE STAGE ───────────────────────────────────────────────── -->
+  <div id="stage">
+    <div id="device-frame" class="with-bezel">
+      <div id="device-island" class="pill"></div>
+      <!-- decorative side buttons -->
+      <div class="side-btn" id="side-right"></div>
+      <div class="side-btn" id="side-left1"></div>
+      <div class="side-btn" id="side-left2"></div>
+      <div class="side-btn" id="side-left3"></div>
       <div id="game-container"></div>
     </div>
   </div>
 
   <script>
-    const devices = {
-      iphone16:      { w: 393, h: 852, label: 'iPhone 16' },
-      iphone16pro:   { w: 430, h: 932, label: 'iPhone 16 Pro Max' },
-      pixel9:        { w: 412, h: 923, label: 'Pixel 9' },
-      galaxys24:     { w: 360, h: 780, label: 'Galaxy S24' },
-      ipad:          { w: 820, h: 1180, label: 'iPad' },
+    // ── Mobile detection ──────────────────────────────────────────────────────
+    const IS_MOBILE =
+      /Android|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1024);
+    if (IS_MOBILE) document.body.classList.add('is-mobile');
+
+    // ── Device specs (logical CSS pixels, portrait) ───────────────────────────
+    const DEVICES = {
+      iphone16:  { w: 393,  h: 852,  r: 44, island: 'pill',   label: 'iPhone 16' },
+      iphonese:  { w: 375,  h: 667,  r: 38, island: 'notch',  label: 'iPhone SE' },
+      pixel7pro: { w: 412,  h: 892,  r: 20, island: 'hole',   label: 'Google Pixel 7 Pro' },
+      android:   { w: 360,  h: 800,  r: 16, island: 'hole',   label: 'Generic Android' },
+      ipadpro:   { w: 1024, h: 1366, r: 18, island: 'hidden', label: 'iPad Pro' },
+      ipadair:   { w: 820,  h: 1180, r: 18, island: 'hidden', label: 'iPad Air' },
+      tablet:    { w: 800,  h: 1280, r: 12, island: 'hidden', label: 'Generic Tablet' },
     };
 
-    function setDevice(key) {
-      document.body.classList.remove('fullscreen');
-      const btns = document.querySelectorAll('#device-bar button');
-      btns.forEach(b => b.classList.remove('active'));
-      const activeBtn = document.querySelector(`[data-device="${key}"]`);
-      if (activeBtn) activeBtn.classList.add('active');
+    const BEZEL = 14; // px bezel padding (scaled)
+    let currentKey  = 'iphone16';
+    let landscape   = false;
+    let viewable    = true;
+    let muted       = false;
 
-      if (key === 'fullscreen') {
-        document.body.classList.add('fullscreen');
-        return;
-      }
+    const frame       = document.getElementById('device-frame');
+    const island      = document.getElementById('device-island');
+    const deviceLabel = document.getElementById('device-label');
+    const menu        = document.getElementById('device-menu');
+    const trigger     = document.getElementById('device-trigger');
+    const gameContainer = document.getElementById('game-container');
 
-      const d = devices[key];
+    function applyDevice(key) {
+      currentKey = key;
+      const d = DEVICES[key];
       if (!d) return;
 
-      const frame = document.getElementById('device-frame');
-      const available = window.innerHeight - 48 - 40; // bar + padding
-      const scale = Math.min(1, available / (d.h + 24));
+      deviceLabel.textContent = d.label;
+      document.querySelectorAll('.menu-item').forEach(el =>
+        el.classList.toggle('active', el.dataset.device === key));
 
-      frame.style.width = (d.w + 24) * scale + 'px';
-      frame.style.height = (d.h + 24) * scale + 'px';
+      const cw = landscape ? d.h : d.w;  // content width
+      const ch = landscape ? d.w : d.h;  // content height
+
+      const toolbarH = IS_MOBILE ? 0 : 54;
+      const availW   = window.innerWidth  - 32;
+      const availH   = window.innerHeight - toolbarH - 32;
+
+      const bezel = viewable ? BEZEL : 0;
+      const totalW = cw + bezel * 2;
+      const totalH = ch + bezel * 2;
+      const scale  = Math.min(1, availW / totalW, availH / totalH);
+
+      frame.style.width        = totalW * scale + 'px';
+      frame.style.height       = totalH * scale + 'px';
+      frame.style.borderRadius = (viewable ? d.r : 0) * scale + 'px';
+      frame.style.padding      = bezel * scale + 'px';
+
+      // Dynamic island (portrait only)
+      island.className = landscape ? 'hidden' : d.island;
+
+      frame.classList.toggle('landscape', landscape);
+      gameContainer.style.borderRadius = (viewable ? Math.max(0, d.r - 4) : 0) * scale + 'px';
     }
 
-    document.getElementById('device-bar').addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (btn) setDevice(btn.dataset.device);
+    function setViewable(on) {
+      viewable = on;
+      frame.classList.toggle('with-bezel', on);
+      frame.classList.toggle('no-bezel',  !on);
+      document.getElementById('btn-view').classList.toggle('active', on);
+      applyDevice(currentKey);
+    }
+
+    // ── Dropdown ──────────────────────────────────────────────────────────────
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = menu.classList.toggle('open');
+      trigger.classList.toggle('open', open);
+    });
+    document.addEventListener('click', () => {
+      menu.classList.remove('open');
+      trigger.classList.remove('open');
+    });
+    menu.addEventListener('click', e => {
+      const item = e.target.closest('.menu-item');
+      if (!item) return;
+      applyDevice(item.dataset.device);
+      menu.classList.remove('open');
+      trigger.classList.remove('open');
     });
 
-    window.addEventListener('resize', () => {
-      const active = document.querySelector('#device-bar button.active');
-      if (active) setDevice(active.dataset.device);
+    // ── Orientation ───────────────────────────────────────────────────────────
+    document.getElementById('btn-orient').addEventListener('click', function () {
+      landscape = !landscape;
+      // Swap the icon between portrait and landscape
+      this.innerHTML = landscape
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <rect x="2" y="5" width="20" height="14" rx="2"/>
+           </svg><span>Landscape</span>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+             <rect x="5" y="2" width="14" height="20" rx="2"/>
+           </svg><span>Portrait</span>`;
+      applyDevice(currentKey);
     });
 
-    // Set default device
-    setDevice('iphone16');
+    // ── Viewable ──────────────────────────────────────────────────────────────
+    document.getElementById('btn-view').addEventListener('click', () => {
+      setViewable(!viewable);
+    });
+
+    // ── Mute ─────────────────────────────────────────────────────────────────
+    document.getElementById('btn-mute').addEventListener('click', function () {
+      muted = !muted;
+      this.classList.toggle('active', muted);
+      document.getElementById('mute-label').textContent = muted ? 'Muted' : 'Sound';
+      document.getElementById('mute-icon').innerHTML = muted
+        ? `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+           <line x1="23" y1="9" x2="17" y2="15"/>
+           <line x1="17" y1="9" x2="23" y2="15"/>`
+        : `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+           <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>`;
+      // Hook for game audio
+      if (typeof window.__muteGame === 'function') window.__muteGame(muted);
+    });
+
+    // ── Reload ────────────────────────────────────────────────────────────────
+    document.getElementById('btn-reload').addEventListener('click', () => location.reload());
+
+    // ── Resize ────────────────────────────────────────────────────────────────
+    window.addEventListener('resize', () => applyDevice(currentKey));
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    applyDevice('iphone16');
   </script>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

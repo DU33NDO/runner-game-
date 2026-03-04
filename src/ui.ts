@@ -1,38 +1,33 @@
-import * as PIXI from 'pixi.js';
-import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from './constants';
-import type { Game } from './game';
+import * as PIXI from "pixi.js";
+import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from "./constants";
+import type { Game } from "./game";
 
-/** Draw a 3D orange button with text */
 function create3DButton(label: string, w: number, h: number): PIXI.Container {
   const btn = new PIXI.Container();
 
-  // Bottom shadow (darker orange) — gives 3D depth
   const shadow = new PIXI.Graphics();
   shadow.beginFill(0xb35900);
   shadow.drawRoundedRect(0, 6, w, h, 12);
   shadow.endFill();
   btn.addChild(shadow);
 
-  // Main button face (orange)
   const face = new PIXI.Graphics();
   face.beginFill(0xff7b00);
   face.drawRoundedRect(0, 0, w, h, 12);
   face.endFill();
   btn.addChild(face);
 
-  // Top highlight (lighter orange, half height)
   const highlight = new PIXI.Graphics();
   highlight.beginFill(0xff9f40, 0.5);
   highlight.drawRoundedRect(3, 2, w - 6, h * 0.45, 10);
   highlight.endFill();
   btn.addChild(highlight);
 
-  // Label text
   const text = new PIXI.Text(label, {
     fontSize: Math.round(h * 0.42),
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fill: 0xffffff,
-    fontFamily: 'Arial',
+    fontFamily: "Arial",
     dropShadow: true,
     dropShadowColor: 0x7a3d00,
     dropShadowDistance: 1,
@@ -43,12 +38,9 @@ function create3DButton(label: string, w: number, h: number): PIXI.Container {
   text.y = h / 2;
   btn.addChild(text);
 
-  // Set pivot to center for scaling
   btn.pivot.set(w / 2, h / 2);
-
-  btn.eventMode = 'static';
-  btn.cursor = 'pointer';
-
+  btn.eventMode = "static";
+  btn.cursor = "pointer";
   return btn;
 }
 
@@ -56,20 +48,46 @@ export class UIManager {
   parent: PIXI.Container;
   game: Game;
 
+  // HUD
   heartsContainer!: PIXI.Container;
   heartSprites: PIXI.Sprite[] = [];
   scoreContainer!: PIXI.Container;
   scoreText!: PIXI.Text;
 
+  // Footer
   footerContainer!: PIXI.Container;
   downloadBtn!: PIXI.Container;
-  downloadBtnBaseScale = 1;
-  downloadBtnScale = 1;
+  downloadBtnScale = 0.8; // start small
   downloadBtnGrowing = true;
+  downloadBtnBaseScale = 1;
 
+  // Overlays
   introContainer!: PIXI.Container;
   failContainer!: PIXI.Container;
   endContainer!: PIXI.Container;
+
+  // Refs for resize
+  private headerSprite!: PIXI.Sprite;
+  private footerSprite!: PIXI.Sprite;
+  private footerH = 0;
+  private introBg!: PIXI.Graphics;
+  private failBg!: PIXI.Graphics;
+  private cursorSprite!: PIXI.Sprite;
+  private tapText!: PIXI.Text;
+  private failSprite!: PIXI.Sprite;
+  private endBgSprite!: PIXI.Sprite;
+  private iconSprite!: PIXI.Sprite;
+  private cursorTicker: ((dt: number) => void) | null = null;
+
+  // HUD metrics
+  private readonly HUD_ML = 8;
+  private readonly HUD_MR = 8;
+  private readonly HUD_MT = 12;
+  private readonly BADGE_SCALE = 0.15;
+  private readonly INNER_PAD = 8;
+  private headerW = 0;
+  private headerH = 0;
+  private heartH = 0;
 
   constructor(parent: PIXI.Container, game: Game) {
     this.parent = parent;
@@ -79,163 +97,310 @@ export class UIManager {
     this.createOverlays();
   }
 
+  // ── HUD ─────────────────────────────────────────────────────────────────────
   private createHUD() {
-    // Hearts - top left
-    this.heartsContainer = new PIXI.Container();
-    this.heartsContainer.x = 12;
-    this.heartsContainer.y = 12;
+    const { HUD_ML, HUD_MR, HUD_MT, BADGE_SCALE, INNER_PAD } = this;
+    const HEART_SCALE = 0.1;
 
-    const heartTex = PIXI.Assets.get('heart') as PIXI.Texture;
+    const heartTex = PIXI.Assets.get("heart") as PIXI.Texture;
+    const headerTex = PIXI.Assets.get("paypalHeader") as PIXI.Texture;
+
+    const heartH = heartTex.height * HEART_SCALE;
+    const headerW = headerTex.width * BADGE_SCALE;
+    const headerH = headerTex.height * BADGE_SCALE;
+    this.heartH = heartH;
+    this.headerW = headerW;
+    this.headerH = headerH;
+
+    const centerY = HUD_MT + Math.max(heartH, headerH) / 2;
+
+    this.heartsContainer = new PIXI.Container();
+    this.heartsContainer.x = HUD_ML;
+    this.heartsContainer.y = centerY - heartH / 2;
     for (let i = 0; i < MAX_LIVES; i++) {
       const heart = new PIXI.Sprite(heartTex);
-      heart.scale.set(0.08);
+      heart.scale.set(HEART_SCALE);
       heart.x = i * 38;
       this.heartSprites.push(heart);
       this.heartsContainer.addChild(heart);
     }
     this.parent.addChild(this.heartsContainer);
 
-    // Score - top right with small PayPal header
     this.scoreContainer = new PIXI.Container();
 
-    const headerTex = PIXI.Assets.get('paypalHeader') as PIXI.Texture;
-    const headerSprite = new PIXI.Sprite(headerTex);
-    headerSprite.anchor.set(1, 0);
-    headerSprite.x = GAME_WIDTH - 8;
-    headerSprite.y = 8;
-    headerSprite.scale.set(0.15);
-    this.scoreContainer.addChild(headerSprite);
+    this.headerSprite = new PIXI.Sprite(headerTex);
+    this.headerSprite.scale.set(BADGE_SCALE);
+    this.headerSprite.x = GAME_WIDTH - HUD_MR - headerW;
+    this.headerSprite.y = centerY - headerH / 2;
+    this.scoreContainer.addChild(this.headerSprite);
 
-    this.scoreText = new PIXI.Text('$0', {
-      fontSize: 16,
-      fontWeight: 'bold',
+    this.scoreText = new PIXI.Text("$0", {
+      fontSize: 26,
+      fontWeight: "900",
       fill: 0x003087,
-      fontFamily: 'Arial',
+      fontFamily: "Arial",
+      dropShadow: true,
+      dropShadowDistance: 1,
+      dropShadowBlur: 0,
     });
-    this.scoreText.anchor.set(1, 0);
-    this.scoreText.x = GAME_WIDTH - 12;
-    this.scoreText.y = 8 + headerTex.height * 0.15 + 2;
+    this.scoreText.anchor.set(1, 0.5);
+    this.scoreText.x = GAME_WIDTH - HUD_MR - INNER_PAD;
+    this.scoreText.y = centerY;
     this.scoreContainer.addChild(this.scoreText);
 
     this.parent.addChild(this.scoreContainer);
   }
 
+  // ── Footer ──────────────────────────────────────────────────────────────────
   private createFooter() {
     this.footerContainer = new PIXI.Container();
 
-    // Footer background
-    const footerTex = PIXI.Assets.get('footer') as PIXI.Texture;
-    const footerSprite = new PIXI.Sprite(footerTex);
-    footerSprite.width = GAME_WIDTH;
-    footerSprite.height = 80;
-    footerSprite.y = GAME_HEIGHT - 80;
-    this.footerContainer.addChild(footerSprite);
+    const footerTex = PIXI.Assets.get("footer") as PIXI.Texture;
+    // Store the natural aspect ratio so height scales with width
+    const footerAspect = footerTex.width / footerTex.height;
 
-    // 3D orange "Download" button on right side of footer
-    this.downloadBtn = create3DButton('Download', 130, 44);
-    this.downloadBtn.x = GAME_WIDTH - 80;
-    this.downloadBtn.y = GAME_HEIGHT - 40;
-    this.downloadBtn.on('pointerdown', () => console.log('Download clicked'));
+    this.footerSprite = new PIXI.Sprite(footerTex);
+    this.footerSprite.anchor.set(0.5, 1); // anchored bottom-center
+    this.footerSprite.width  = GAME_WIDTH;
+    this.footerSprite.height = GAME_WIDTH / footerAspect; // proportional height
+    this.footerH = this.footerSprite.height;
+    this.footerSprite.x = GAME_WIDTH / 2;
+    this.footerSprite.y = GAME_HEIGHT;
+    this.footerContainer.addChild(this.footerSprite);
 
+    // Download button — moderately sized, scales down for landscape
+    this.downloadBtn = create3DButton("Download", 110, 36);
+    this.downloadBtn.x = GAME_WIDTH - 70;
+    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2;
+    this.downloadBtn.on("pointerdown", () => console.log("Download clicked"));
     this.footerContainer.addChild(this.downloadBtn);
+
     this.parent.addChild(this.footerContainer);
   }
 
+  // ── Overlays ────────────────────────────────────────────────────────────────
   private createOverlays() {
-    // Intro overlay
+    // Intro
     this.introContainer = new PIXI.Container();
     this.introContainer.visible = false;
 
-    const introBg = new PIXI.Graphics();
-    introBg.beginFill(0x000000, 0.3);
-    introBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    introBg.endFill();
-    this.introContainer.addChild(introBg);
+    this.introBg = new PIXI.Graphics();
+    this.introBg.beginFill(0x000000, 0.3);
+    this.introBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.introBg.endFill();
+    this.introContainer.addChild(this.introBg);
 
-    const cursorTex = PIXI.Assets.get('cursor') as PIXI.Texture;
-    const cursorSprite = new PIXI.Sprite(cursorTex);
-    cursorSprite.anchor.set(0.5, 0.5);
-    cursorSprite.x = GAME_WIDTH / 2;
-    cursorSprite.y = GAME_HEIGHT / 2 - 50;
-    cursorSprite.scale.set(0.8);
-    this.introContainer.addChild(cursorSprite);
+    this.cursorSprite = new PIXI.Sprite(
+      PIXI.Assets.get("cursor") as PIXI.Texture,
+    );
+    this.cursorSprite.anchor.set(0.5, 0.5);
+    this.cursorSprite.x = GAME_WIDTH / 2;
+    this.cursorSprite.y = GAME_HEIGHT / 2 - 50;
+    this.cursorSprite.scale.set(0.3); // start small — pulse will grow it
+    this.introContainer.addChild(this.cursorSprite);
 
-    const tapText = new PIXI.Text('Tap to start earning!', {
+    this.tapText = new PIXI.Text("Tap to start earning!", {
       fontSize: 28,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fill: 0xffffff,
       stroke: 0x000000,
       strokeThickness: 4,
-      fontFamily: 'Arial',
+      fontFamily: "Arial",
     });
-    tapText.anchor.set(0.5, 0.5);
-    tapText.x = GAME_WIDTH / 2;
-    tapText.y = GAME_HEIGHT / 2 + 30;
-    this.introContainer.addChild(tapText);
+    this.tapText.anchor.set(0.5, 0.5);
+    this.tapText.x = GAME_WIDTH / 2;
+    this.tapText.y = GAME_HEIGHT / 2 + 30;
+    this.introContainer.addChild(this.tapText);
+
+    // Cursor pulse animation (small → big → small)
+    let cursorPulseScale = 0.5;
+    let cursorDir = 1;
+    this.cursorTicker = (dt: number) => {
+      cursorPulseScale += 0.015 * dt * cursorDir;
+      if (cursorPulseScale >= 0.7) {
+        cursorPulseScale = 0.7;
+        cursorDir = -1;
+      }
+      if (cursorPulseScale <= 0.5) {
+        cursorPulseScale = 0.5;
+        cursorDir = 1;
+      }
+      this.cursorSprite.scale.set(cursorPulseScale);
+    };
+    PIXI.Ticker.shared.add(this.cursorTicker);
 
     this.parent.addChild(this.introContainer);
 
-    // Fail overlay
+    // Fail
     this.failContainer = new PIXI.Container();
     this.failContainer.visible = false;
 
-    const failBg = new PIXI.Graphics();
-    failBg.beginFill(0x000000, 0.5);
-    failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    failBg.endFill();
-    this.failContainer.addChild(failBg);
+    this.failBg = new PIXI.Graphics();
+    this.failBg.beginFill(0x000000, 0.5);
+    this.failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.failBg.endFill();
+    this.failContainer.addChild(this.failBg);
 
-    const failTex = PIXI.Assets.get('fail') as PIXI.Texture;
-    const failSprite = new PIXI.Sprite(failTex);
-    failSprite.anchor.set(0.5, 0.5);
-    failSprite.x = GAME_WIDTH / 2;
-    failSprite.y = GAME_HEIGHT / 2 - 50;
-    failSprite.scale.set(0.5);
-    this.failContainer.addChild(failSprite);
+    this.failSprite = new PIXI.Sprite(PIXI.Assets.get("fail") as PIXI.Texture);
+    this.failSprite.anchor.set(0.5, 0.5);
+    this.failSprite.x = GAME_WIDTH / 2;
+    this.failSprite.y = GAME_HEIGHT / 2 - 50;
+    this.failSprite.scale.set(0.5);
+    this.failContainer.addChild(this.failSprite);
 
     this.parent.addChild(this.failContainer);
 
-    // End screen overlay
+    // End screen
     this.endContainer = new PIXI.Container();
     this.endContainer.visible = false;
 
-    const endBgTex = PIXI.Assets.get('endBackground') as PIXI.Texture;
-    const endBgSprite = new PIXI.Sprite(endBgTex);
-    endBgSprite.width = GAME_WIDTH;
-    endBgSprite.height = GAME_HEIGHT;
-    this.endContainer.addChild(endBgSprite);
+    this.endBgSprite = new PIXI.Sprite(
+      PIXI.Assets.get("endBackground") as PIXI.Texture,
+    );
+    this.endBgSprite.width = GAME_WIDTH;
+    this.endBgSprite.height = GAME_HEIGHT;
+    this.endContainer.addChild(this.endBgSprite);
 
-    const iconTex = PIXI.Assets.get('aftergameIcon') as PIXI.Texture;
-    const iconSprite = new PIXI.Sprite(iconTex);
-    iconSprite.anchor.set(0.5, 0.5);
-    iconSprite.x = GAME_WIDTH / 2;
-    iconSprite.y = GAME_HEIGHT / 2 - 100;
-    iconSprite.scale.set(0.4);
-    this.endContainer.addChild(iconSprite);
+    this.iconSprite = new PIXI.Sprite(
+      PIXI.Assets.get("aftergameIcon") as PIXI.Texture,
+    );
+    this.iconSprite.anchor.set(0.5, 0.5);
+    this.iconSprite.x = GAME_WIDTH / 2;
+    this.iconSprite.y = GAME_HEIGHT / 2 - 100;
+    this.iconSprite.scale.set(0.4);
+    this.endContainer.addChild(this.iconSprite);
 
     this.parent.addChild(this.endContainer);
   }
 
+  // ── Resize ──────────────────────────────────────────────────────────────────
+  resize() {
+    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } =
+      this;
+    const centerY = HUD_MT + Math.max(heartH, headerH) / 2;
+
+    this.heartsContainer.x = HUD_ML;
+    this.heartsContainer.y = centerY - heartH / 2;
+    this.headerSprite.x = GAME_WIDTH - HUD_MR - headerW;
+    this.headerSprite.y = centerY - headerH / 2;
+    this.scoreText.x = GAME_WIDTH - HUD_MR - INNER_PAD;
+    this.scoreText.y = centerY;
+
+    // Footer: scale width to GAME_WIDTH, height proportional (keeps aspect ratio)
+    const aspect = this.footerSprite.texture.width / this.footerSprite.texture.height;
+    this.footerSprite.width  = GAME_WIDTH;
+    this.footerSprite.height = GAME_WIDTH / aspect;
+    this.footerH             = this.footerSprite.height;
+    this.footerSprite.x      = GAME_WIDTH / 2;
+    this.footerSprite.y      = GAME_HEIGHT;
+    this.downloadBtn.x       = GAME_WIDTH - 70;
+    this.downloadBtn.y       = GAME_HEIGHT - this.footerH / 2;
+
+    // Scale download button: smaller in landscape / small screens
+    this.downloadBtnBaseScale = Math.min(
+      0.75,
+      Math.max(0.45, (GAME_HEIGHT / 800) * 0.75),
+    );
+
+    // Overlay backgrounds
+    this.introBg.clear();
+    this.introBg.beginFill(0x000000, 0.3);
+    this.introBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.introBg.endFill();
+
+    this.failBg.clear();
+    this.failBg.beginFill(0x000000, 0.5);
+    this.failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.failBg.endFill();
+
+    this.cursorSprite.x = GAME_WIDTH / 2;
+    this.cursorSprite.y = GAME_HEIGHT / 2 - 50;
+    this.tapText.x = GAME_WIDTH / 2;
+    this.tapText.y = GAME_HEIGHT / 2 + 30;
+    this.failSprite.x = GAME_WIDTH / 2;
+    this.failSprite.y = GAME_HEIGHT / 2 - 50;
+
+    this.endBgSprite.width = GAME_WIDTH;
+    this.endBgSprite.height = GAME_HEIGHT;
+    this.iconSprite.x = GAME_WIDTH / 2;
+    this.iconSprite.y = GAME_HEIGHT / 2 - 100;
+  }
+
+  // ── Badge center (for fly animation target) ──────────────────────────────────
+  getBadgeCenter(): { x: number; y: number } {
+    const { HUD_MT, HUD_MR, headerW, headerH, heartH } = this;
+    return {
+      x: GAME_WIDTH - HUD_MR - headerW / 2,
+      y: HUD_MT + Math.max(heartH, headerH) / 2,
+    };
+  }
+
+  // ── Fly-to-score animation ───────────────────────────────────────────────────
+  flyToScore(startX: number, startY: number, texKey: string) {
+    const tex = PIXI.Assets.get(texKey) as PIXI.Texture;
+    if (!tex) return;
+
+    const sprite = new PIXI.Sprite(tex);
+    sprite.anchor.set(0.5, 0.5);
+    sprite.scale.set(0.07);
+    sprite.x = startX;
+    sprite.y = startY;
+    this.parent.addChild(sprite);
+
+    const target = this.getBadgeCenter();
+    const dx = target.x - startX;
+    const dy = target.y - startY;
+    const duration = 0.55;
+    let elapsed = 0;
+
+    const tick = (dt: number) => {
+      elapsed += dt / 60;
+      const t = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 2); // ease-out
+
+      sprite.x = startX + dx * ease;
+      sprite.y = startY + dy * ease;
+      sprite.rotation += 0.2 * dt; // spin
+
+      // Fade + shrink in the last 25%
+      if (t > 0.75) {
+        const fade = 1 - (t - 0.75) / 0.25;
+        sprite.alpha = fade;
+        sprite.scale.set(0.07 * fade);
+      }
+
+      if (t >= 1) {
+        PIXI.Ticker.shared.remove(tick);
+        this.parent.removeChild(sprite);
+        sprite.destroy();
+      }
+    };
+    PIXI.Ticker.shared.add(tick);
+  }
+
+  // ── Public methods ────────────────────────────────────────────────────────────
   showIntro() {
     this.introContainer.visible = true;
   }
-
   hideIntro() {
     this.introContainer.visible = false;
+    // Stop cursor pulse when game starts
+    if (this.cursorTicker) {
+      PIXI.Ticker.shared.remove(this.cursorTicker);
+      this.cursorTicker = null;
+    }
   }
-
   showFail() {
     this.failContainer.visible = true;
   }
 
   showFinish() {
-    const finishTex = PIXI.Assets.get('finish') as PIXI.Texture;
-    const finishSprite = new PIXI.Sprite(finishTex);
-    finishSprite.anchor.set(0.5, 0.5);
-    finishSprite.x = GAME_WIDTH / 2;
-    finishSprite.y = GAME_HEIGHT / 2 - 50;
-    finishSprite.scale.set(0.6);
-    this.parent.addChild(finishSprite);
+    const s = new PIXI.Sprite(PIXI.Assets.get("finish") as PIXI.Texture);
+    s.anchor.set(0.5, 0.5);
+    s.x = GAME_WIDTH / 2;
+    s.y = GAME_HEIGHT / 2 - 50;
+    s.scale.set(0.6);
+    this.parent.addChild(s);
   }
 
   showEnd(score: number) {
@@ -244,20 +409,19 @@ export class UIManager {
 
     const scoreText = new PIXI.Text(`You earned: $${score}`, {
       fontSize: 28,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       fill: 0x003087,
-      fontFamily: 'Arial',
+      fontFamily: "Arial",
     });
     scoreText.anchor.set(0.5, 0.5);
     scoreText.x = GAME_WIDTH / 2;
     scoreText.y = GAME_HEIGHT / 2;
     this.endContainer.addChild(scoreText);
 
-    // Big 3D orange "Download Now!" button on end screen
-    const bigBtn = create3DButton('Download Now!', 240, 56);
+    const bigBtn = create3DButton("Download Now!", 240, 56);
     bigBtn.x = GAME_WIDTH / 2;
     bigBtn.y = GAME_HEIGHT / 2 + 70;
-    bigBtn.on('pointerdown', () => console.log('Download clicked'));
+    bigBtn.on("pointerdown", () => console.log("Download clicked"));
     this.endContainer.addChild(bigBtn);
   }
 
@@ -269,17 +433,27 @@ export class UIManager {
 
   updateScore(score: number) {
     this.scoreText.text = `$${score}`;
+    const digits = score.toString().length;
+    this.scoreText.style.fontSize = digits <= 2 ? 28 : digits <= 4 ? 20 : 14;
   }
 
   update(dt: number) {
-    // Pulsing download button: small -> big -> small
+    // Download button: pulse small → big → small
     if (this.downloadBtnGrowing) {
-      this.downloadBtnScale += 0.008 * dt;
-      if (this.downloadBtnScale >= 1.2) this.downloadBtnGrowing = false;
+      this.downloadBtnScale += 0.012 * dt;
+      if (this.downloadBtnScale >= 1.0) {
+        this.downloadBtnScale = 1.0;
+        this.downloadBtnGrowing = false;
+      }
     } else {
-      this.downloadBtnScale -= 0.008 * dt;
-      if (this.downloadBtnScale <= 0.85) this.downloadBtnGrowing = true;
+      this.downloadBtnScale -= 0.012 * dt;
+      if (this.downloadBtnScale <= 0.8) {
+        this.downloadBtnScale = 0.8;
+        this.downloadBtnGrowing = true;
+      }
     }
-    this.downloadBtn.scale.set(this.downloadBtnScale);
+    this.downloadBtn.scale.set(
+      this.downloadBtnScale * this.downloadBtnBaseScale,
+    );
   }
 }

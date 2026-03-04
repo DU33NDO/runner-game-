@@ -12,7 +12,7 @@ export const GRAVITY = 0.8;
 export const JUMP_FORCE = -18;
 
 // Scrolling speed
-export const SCROLL_SPEED = 4;
+export const SCROLL_SPEED = 5;
 
 // Enemy animation frame indices (from atlas)
 export const ENEMY_ANIMS = {
@@ -20,8 +20,8 @@ export const ENEMY_ANIMS = {
 };
 
 // Spawn intervals (in frames at 60fps)
-export const OBSTACLE_INTERVAL_MIN = 90;
-export const OBSTACLE_INTERVAL_MAX = 180;
+export const OBSTACLE_INTERVAL_MIN = 120;
+export const OBSTACLE_INTERVAL_MAX = 230;
 export const COLLECTIBLE_INTERVAL_MIN = 130;
 export const COLLECTIBLE_INTERVAL_MAX = 280;
 export const ENEMY_INTERVAL_MIN = 200;

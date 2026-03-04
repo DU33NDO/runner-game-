@@ -138,7 +138,7 @@ export function spawnCollectible(
   const tex = PIXI.Assets.get(texKey) as PIXI.Texture;
   const sprite = new PIXI.Sprite(tex);
   sprite.anchor.set(0.5, 0.5);
-  sprite.scale.set(isDollar ? 0.06 : 0.065);
+  sprite.scale.set(isDollar ? 0.09 : 0.095);
 
   const container = new PIXI.Container();
   container.addChild(sprite);
@@ -163,7 +163,7 @@ export function spawnCollectible(
     type: isDollar ? "dollar" : "paypalMoney",
     floatTicker: floatFn,
     getBounds() {
-      const s = isDollar ? 0.06 : 0.065;
+      const s = isDollar ? 0.09 : 0.095;
       const w = tex.width * s;
       const h = tex.height * s;
       return {
@@ -203,7 +203,7 @@ export function spawnJumpCoins(parent: PIXI.Container): GameObject[] {
     const isDollar = Math.random() > 0.4;
     const texKey = isDollar ? "dollar" : "paypalMoney";
     const tex = PIXI.Assets.get(texKey) as PIXI.Texture;
-    const s = isDollar ? 0.07 : 0.07;
+    const s = isDollar ? 0.10 : 0.10;
 
     const sprite = new PIXI.Sprite(tex);
     sprite.anchor.set(0.5, 0.5);

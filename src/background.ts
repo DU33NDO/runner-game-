@@ -79,19 +79,19 @@ export function createScrollingBackground(
   // Landscape phones (GAME_HEIGHT < 500) — tweak these values for phone landscape
   const LANDSCAPE_PHONE_CONFIGS: DecorCfg[] = [
     // Trees
-    [tree1, 60, -185, 1.1, 1.0],
-    [tree1, 370, -185, 1.1, 1.0],
-    [tree2, 700, -185, 1.1, 1.0],
-    [tree2, 1180, -185, 1.1, 1.0],
+    [tree1, 60, -260, 1.1, 1.0],
+    [tree1, 370, -260, 1.1, 1.0],
+    [tree2, 700, -260, 1.1, 1.0],
+    [tree2, 1180, -260, 1.1, 1.0],
     // Lamps
-    [lampTex, 150, -185, 1.1, 1.0],
-    [lampTex, 460, -185, 1.1, 1.0],
-    [lampTex, 780, -185, 1.1, 1.0],
+    [lampTex, 150, -260, 1.1, 1.0],
+    [lampTex, 460, -260, 1.1, 1.0],
+    [lampTex, 780, -260, 1.1, 1.0],
     // Bushes
-    [bush1, 110, -185, 0.42, 1.0],
-    [bush3, 400, -185, 0.32, 1.0],
-    [bush2, 620, -185, 0.4, 1.0],
-    [bush1, 830, -185, 0.44, 1.0],
+    [bush1, 110, -260, 0.42, 1.0],
+    [bush3, 400, -260, 0.32, 1.0],
+    [bush2, 620, -260, 0.4, 1.0],
+    [bush1, 830, -260, 0.44, 1.0],
   ];
 
   // ── Spawn sprites (one per config slot, reused across orientations) ────────
@@ -115,14 +115,14 @@ export function createScrollingBackground(
     bgLayer.y = bgOffsetY;
     bgLayer.width = GAME_WIDTH;
     bgLayer.height = GAME_HEIGHT - bgOffsetY;
-    // Shift tile so the background road (visual offset 600px from origin) tracks GROUND_Y
-    bgLayer.tilePosition.y = GROUND_Y - bgOffsetY - 600;
+    const roadOffset = !isLandscape ? 600 : isPhone ? 550 : 600; // ← tune per mode
+    bgLayer.tilePosition.y = GROUND_Y - bgOffsetY - roadOffset;
     bgLayer.tileScale.set(
       !isLandscape
-        ? 0.9 // portrait scale
+        ? 1.1 // portrait scale
         : isPhone
-          ? 0.9 // ← phone landscape scale
-          : 0.9, // ← tablet landscape scale
+          ? 1.1 // ← phone landscape scale
+          : 1.1, // ← tablet landscape scale
     );
 
     const configs = !isLandscape

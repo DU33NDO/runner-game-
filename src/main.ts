@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js';
-import { ASSETS, playerPlistRaw, enemyPlistRaw } from './assets';
+import { ASSETS, enemyPlistRaw } from './assets';
 import { GAME_WIDTH, GAME_HEIGHT, setGameSize } from './constants';
 import { createSpritesheetFromPlist } from './spritesheet';
 import { Game } from './game';
+
 import { setMuted } from './sound';
 
 (window as any).__muteGame = setMuted;
@@ -46,13 +47,10 @@ async function init() {
   const assetList = Object.entries(ASSETS).map(([key, url]) => ({ alias: key, src: url }));
   await PIXI.Assets.load(assetList);
 
-  const playerBaseTex = (PIXI.Assets.get('playerAtlas') as PIXI.Texture).baseTexture;
-  const enemyBaseTex  = (PIXI.Assets.get('enemyAtlas')  as PIXI.Texture).baseTexture;
+  const enemyBaseTex = (PIXI.Assets.get('enemyAtlas') as PIXI.Texture).baseTexture;
+  const enemySheet   = await createSpritesheetFromPlist(enemyBaseTex, enemyPlistRaw, 'enemy');
 
-  const playerSheet = await createSpritesheetFromPlist(playerBaseTex, playerPlistRaw, 'player');
-  const enemySheet  = await createSpritesheetFromPlist(enemyBaseTex,  enemyPlistRaw,  'enemy');
-
-  game = new Game(app, playerSheet, enemySheet);
+  game = new Game(app, enemySheet);
   game.start();
 
   // Initial resize after game is ready

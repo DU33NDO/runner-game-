@@ -50,7 +50,6 @@ export class Game {
   ui!: UIManager;
   bgElements!: ReturnType<typeof createScrollingBackground>;
 
-  playerSheet: PIXI.Spritesheet;
   enemySheet: PIXI.Spritesheet;
 
   obstacles: GameObject[] = [];
@@ -72,6 +71,7 @@ export class Game {
   // Finish line
   finishLineSpawned = false;
   finishLineContainer: PIXI.Container | null = null;
+  finishLineTearFn: (() => void) | null = null;
 
   // Tutorial state
   tutorialTimer = 0;
@@ -83,11 +83,9 @@ export class Game {
 
   constructor(
     app: PIXI.Application<HTMLCanvasElement>,
-    playerSheet: PIXI.Spritesheet,
     enemySheet: PIXI.Spritesheet,
   ) {
     this.app = app;
-    this.playerSheet = playerSheet;
     this.enemySheet = enemySheet;
 
     this.bgLayer = new PIXI.Container();
@@ -110,7 +108,7 @@ export class Game {
       this.bgLayer,
       this.app.renderer as PIXI.Renderer,
     );
-    this.player = new Player(this.gameLayer, this.playerSheet);
+    this.player = new Player(this.gameLayer);
     this.ui = new UIManager(this.uiLayer, this);
 
     this.state = "intro";
@@ -335,7 +333,9 @@ export class Game {
   checkCollision(player: Player, obj: GameObject, shrink = 30): boolean {
     const pb = player.getBounds();
     const ob = obj.getBounds();
-    const s = shrink * gameScale();
+    // Cap shrink so it never exceeds 20% of the smallest hitbox dimension
+    const raw = shrink * gameScale();
+    const s = Math.min(raw, ob.width * 0.2, ob.height * 0.2, pb.width * 0.2, pb.height * 0.2);
     return (
       pb.x + s < ob.x + ob.width - s &&
       pb.x + pb.width - s > ob.x + s &&
@@ -348,6 +348,7 @@ export class Game {
     this.lives--;
     this.ui.updateLives(this.lives);
     this.invincibleFrames = 90;
+    this.player.playDamage();
     this.player.hitFlash();
     playDamage();
 
@@ -366,15 +367,99 @@ export class Game {
   createFinishLineWorld(): PIXI.Container {
     const c = new PIXI.Container();
 
-    // Vertical checkered stripe
-    const lineTex = PIXI.Assets.get("finishLine") as PIXI.Texture;
-    const line = new PIXI.Sprite(lineTex);
-    line.anchor.set(0.5, 1);
-    line.height = 100;
-    line.width = 60;
-    line.y = GROUND_Y + 40;
-    c.addChild(line);
+    const POLE_H    = 110;
+    const HALF_SPAN = 38;
+    const groundY   = GROUND_Y - 20;
+    const topY      = groundY - POLE_H;
 
+    // Silver poles
+    for (const px of [-HALF_SPAN, HALF_SPAN]) {
+      const pole = new PIXI.Graphics();
+      pole.beginFill(0xbbbbbb);
+      pole.drawRect(px - 5, topY, 10, POLE_H);
+      pole.endFill();
+      c.addChild(pole);
+    }
+
+    // Checkered red/white ribbon texture (64×20 px)
+    const RW = 64, RH = 20;
+    const canvas = document.createElement("canvas");
+    canvas.width = RW; canvas.height = RH;
+    const ctx = canvas.getContext("2d")!;
+    for (let col = 0; col < 4; col++) {
+      for (let row = 0; row < 2; row++) {
+        ctx.fillStyle = (col + row) % 2 === 0 ? "#ee1111" : "#ffffff";
+        ctx.fillRect(col * (RW / 4), row * (RH / 2), RW / 4, RH / 2);
+      }
+    }
+    const ribbonTex = PIXI.Texture.from(canvas);
+
+    // Rope control points with catenary sag
+    const N   = 14;
+    const MID = Math.floor(N / 2);
+    const pts: PIXI.Point[] = [];
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      pts.push(new PIXI.Point(
+        -HALF_SPAN + t * HALF_SPAN * 2,
+        topY + Math.sin(t * Math.PI) * 14,
+      ));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rope = new (PIXI as any).SimpleRope(ribbonTex, pts);
+    c.addChild(rope);
+
+    // Wave animation (stored so we can stop it on tear)
+    let time = 0;
+    const waveTick = (dt: number) => {
+      time += 0.04 * dt;
+      for (let i = 1; i < N - 1; i++) {
+        const t = i / (N - 1);
+        pts[i].y = topY + Math.sin(t * Math.PI) * 14 + Math.sin(time + t * 4) * 3;
+      }
+    };
+    PIXI.Ticker.shared.add(waveTick);
+
+    // Tear function — called when player crosses the finish line
+    this.finishLineTearFn = () => {
+      PIXI.Ticker.shared.remove(waveTick);
+      c.removeChild(rope);
+      rope.destroy();
+
+      // Redrawn each frame as two bezier curves — no SimpleRope geometry issues
+      const gfx = new PIXI.Graphics();
+      c.addChild(gfx);
+
+      // Free ends lerp to a natural hang position — no runaway velocity
+      let cY = pts[MID].y;
+      const targetY = topY + 55;
+
+      let elapsed = 0;
+      const fallTick = (dt: number) => {
+        elapsed += dt;
+        cY += (targetY - cY) * 0.08 * dt;
+
+        gfx.clear();
+        gfx.alpha = elapsed > 30 ? Math.max(0, 1 - (elapsed - 30) / 50) : 1;
+        gfx.lineStyle(7, 0xee1111, 1);
+
+        // Left piece: pinned at left pole top, free end droops to center
+        gfx.moveTo(-HALF_SPAN, topY);
+        gfx.quadraticCurveTo(-HALF_SPAN * 0.35, (topY + cY) / 2, 0, cY);
+
+        // Right piece: pinned at right pole top, free end droops to center
+        gfx.moveTo(HALF_SPAN, topY);
+        gfx.quadraticCurveTo(HALF_SPAN * 0.35, (topY + cY) / 2, 0, cY);
+
+        if (elapsed > 80) {
+          PIXI.Ticker.shared.remove(fallTick);
+          c.removeChild(gfx);
+          gfx.destroy();
+        }
+      };
+      PIXI.Ticker.shared.add(fallTick);
+    };
 
     c.x = GAME_WIDTH + 60;
     this.gameLayer.addChildAt(c, 0);
@@ -394,6 +479,8 @@ export class Game {
   onFinish() {
     this.state = "finished";
     this.player.stopAndStand();
+    this.finishLineTearFn?.();
+    this.finishLineTearFn = null;
     this.ui.showConfetti();
     playWin();
     setTimeout(() => {

@@ -191,76 +191,80 @@ export function showInstallPopup(parent: PIXI.Container, won = true): void {
   overlay.eventMode = "static";
   popup.addChild(overlay);
 
-  // Card container — scaled down in landscape
+  // Card dimensions — width capped so it fits any screen
+  const cardScale = isLandscape ? 0.65 : 1;
+  const CARD_W = Math.min(GAME_WIDTH * 0.82, 340);
+  const PAD = 20;
+  const INNER_W = CARD_W - PAD * 2;
+  let cy = PAD; // running Y inside card-local space
+
   const cardContainer = new PIXI.Container();
-  const cardScale = isLandscape ? 0.6 : 1;
-  cardContainer.scale.set(cardScale);
-  cardContainer.x = (GAME_WIDTH  - GAME_WIDTH  * cardScale) / 2;
-  cardContainer.y = (GAME_HEIGHT - GAME_HEIGHT * cardScale) / 2;
   popup.addChild(cardContainer);
 
-  // White card
-  const cardW = GAME_WIDTH * 0.82;
-  const cardH = GAME_HEIGHT * 0.52;
-  const cardX = (GAME_WIDTH - cardW) / 2;
-  const cardY = (GAME_HEIGHT - cardH) / 2;
-  const card = new PIXI.Graphics();
-  card.beginFill(0xffffff);
-  card.drawRoundedRect(cardX, cardY, cardW, cardH, 20);
-  card.endFill();
-  cardContainer.addChild(card);
-
-  // Win / lose message at top of card
+  // Win / lose message
   const message = won
     ? "Congratulations!\nChoose your reward"
     : "You didn't make it!\nTry again on the app!";
   const msgText = new PIXI.Text(message, {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "bold",
     fill: won ? 0x1a7f1a : 0xcc2222,
     fontFamily: "GameFont, sans-serif",
     align: "center",
     wordWrap: true,
-    wordWrapWidth: cardW - 40,
+    wordWrapWidth: INNER_W,
   });
   msgText.anchor.set(0.5, 0);
-  msgText.x = GAME_WIDTH / 2;
-  msgText.y = cardY + 18;
+  msgText.x = CARD_W / 2;
+  msgText.y = cy;
   cardContainer.addChild(msgText);
+  cy += msgText.height + 12;
 
-  // App icon
+  // App icon — constrained to fit inside card
   const iconTex = PIXI.Assets.get("aftergameIcon") as PIXI.Texture;
   const icon = new PIXI.Sprite(iconTex);
   icon.anchor.set(0.5, 0);
-  icon.scale.set((cardW * 0.28) / iconTex.width);
-  icon.x = GAME_WIDTH / 2;
-  icon.y = msgText.y + msgText.height + 14;
+  const iconW = Math.min(INNER_W * 0.38, iconTex.width);
+  icon.scale.set(iconW / iconTex.width);
+  icon.x = CARD_W / 2;
+  icon.y = cy;
   cardContainer.addChild(icon);
+  cy += icon.height + 10;
 
   // App title
   const appTitle = new PIXI.Text("Playoff: Play & Earn Rewards", {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "bold",
     fill: 0x222222,
     fontFamily: "GameFont, sans-serif",
     align: "center",
     wordWrap: true,
-    wordWrapWidth: cardW - 40,
+    wordWrapWidth: INNER_W,
   });
   appTitle.anchor.set(0.5, 0);
-  appTitle.x = GAME_WIDTH / 2;
-  appTitle.y = icon.y + icon.height + 12;
+  appTitle.x = CARD_W / 2;
+  appTitle.y = cy;
   cardContainer.addChild(appTitle);
+  cy += appTitle.height + PAD;
+
+  const CARD_H = cy;
+
+  // White card drawn behind content
+  const card = new PIXI.Graphics();
+  card.beginFill(0xffffff);
+  card.drawRoundedRect(0, 0, CARD_W, CARD_H, 20);
+  card.endFill();
+  cardContainer.addChildAt(card, 0);
 
   // Close ✕ button
   const closeBtn = new PIXI.Text("✕", {
-    fontSize: 26,
+    fontSize: 22,
     fill: 0x888888,
     fontFamily: "GameFont, sans-serif",
   });
   closeBtn.anchor.set(0.5, 0.5);
-  closeBtn.x = cardX + cardW - 22;
-  closeBtn.y = cardY + 22;
+  closeBtn.x = CARD_W - 18;
+  closeBtn.y = 18;
   closeBtn.eventMode = "static";
   closeBtn.cursor = "pointer";
   closeBtn.on("pointerdown", () => {
@@ -268,6 +272,11 @@ export function showInstallPopup(parent: PIXI.Container, won = true): void {
     popup.destroy({ children: true });
   });
   cardContainer.addChild(closeBtn);
+
+  // Scale and center the card container
+  cardContainer.scale.set(cardScale);
+  cardContainer.x = (GAME_WIDTH  - CARD_W * cardScale) / 2;
+  cardContainer.y = (GAME_HEIGHT - CARD_H * cardScale) / 2;
 
   parent.addChild(popup);
 }

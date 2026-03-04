@@ -19,17 +19,30 @@ import aftergameIconUrl from '../assets/aftergame icon.png?url';
 import finishUrl from '../assets/finish.png?url';
 import finishLineUrl from '../assets/finish_line.png?url';
 import heartUrl from '../assets/heart.png?url';
-// InstallButton.png available but not imported (using drawn 3D button instead)
 import lenta1Url from '../assets/lenta_1.png?url';
 import lenta2Url from '../assets/lenta_2.png?url';
 import paypalScoreUrl from '../assets/PaypalScore.png?url';
 
-// Atlas spritesheets (top-level copies, not inside frame folders)
-import playerAtlasUrl from '../assets/player_atlas.png?url';
-import enemyAtlasUrl from '../assets/enemy_atlas.png?url';
+// Individual player frames (only the ones used in animations)
+import p0  from '../assets/player/0.png?url';
+import p1  from '../assets/player/1.png?url';
+import p2  from '../assets/player/2.png?url';
+import p6  from '../assets/player/6.png?url';
+import p11 from '../assets/player/11.png?url';
+import p13 from '../assets/player/13.png?url';
+import p14 from '../assets/player/14.png?url';
+import p18 from '../assets/player/18.png?url';
+import p19 from '../assets/player/19.png?url';
+import p20 from '../assets/player/20.png?url';
+import p25 from '../assets/player/25.png?url';
+import p26 from '../assets/player/26.png?url';
+import p27 from '../assets/player/27.png?url';
+import p28 from '../assets/player/28.png?url';
+import p36 from '../assets/player/36.png?url';
+import p37 from '../assets/player/37.png?url';
 
-// Plist raw text
-import playerPlistRaw from '../assets/player_atlas.plist?raw';
+// Enemy atlas (still atlas-based)
+import enemyAtlasUrl from '../assets/enemy_atlas.png?url';
 import enemyPlistRaw from '../assets/enemy_atlas.plist?raw';
 
 export const ASSETS: Record<string, string> = {
@@ -56,8 +69,25 @@ export const ASSETS: Record<string, string> = {
   lenta1: lenta1Url,
   lenta2: lenta2Url,
   paypalScore: paypalScoreUrl,
-  playerAtlas: playerAtlasUrl,
+  // Player individual frames
+  player_0:  p0,
+  player_1:  p1,
+  player_2:  p2,
+  player_6:  p6,
+  player_11: p11,
+  player_13: p13,
+  player_14: p14,
+  player_18: p18,
+  player_19: p19,
+  player_20: p20,
+  player_25: p25,
+  player_26: p26,
+  player_27: p27,
+  player_28: p28,
+  player_36: p36,
+  player_37: p37,
+  // Enemy atlas
   enemyAtlas: enemyAtlasUrl,
 };
 
-export { playerPlistRaw, enemyPlistRaw };
+export { enemyPlistRaw };

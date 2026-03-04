@@ -12,6 +12,7 @@ export function buildEndScreen(
   score: number,
   won: boolean,
   parent: PIXI.Container,
+  scale = 1,
 ): PIXI.Container {
   // Spin the background
   PIXI.Ticker.shared.add((dt: number) => {
@@ -128,9 +129,10 @@ export function buildEndScreen(
   column.addChild(installBtn);
   curY += BTN_H + 6; // +6 for the button shadow
 
-  // Centre the column on screen
+  // Centre the column on screen, applying optional scale
+  column.scale.set(scale);
   column.x = GAME_WIDTH / 2;
-  column.y = Math.round((GAME_HEIGHT - curY) / 2);
+  column.y = Math.round((GAME_HEIGHT - curY * scale) / 2);
   endContainer.addChild(column);
 
   // ── Countdown ticker ─────────────────────────────────────────────────────────
@@ -177,16 +179,25 @@ export function buildEndScreen(
 
 // ── Install popup ─────────────────────────────────────────────────────────────
 
-function showInstallPopup(parent: PIXI.Container, won: boolean): void {
+export function showInstallPopup(parent: PIXI.Container, won = true): void {
+  const isLandscape = GAME_WIDTH > GAME_HEIGHT;
   const popup = new PIXI.Container();
 
-  // Dark overlay — blocks interaction with scene below
+  // Dark overlay — full screen, never scaled
   const overlay = new PIXI.Graphics();
   overlay.beginFill(0x000000, 0.75);
   overlay.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   overlay.endFill();
   overlay.eventMode = "static";
   popup.addChild(overlay);
+
+  // Card container — scaled down in landscape
+  const cardContainer = new PIXI.Container();
+  const cardScale = isLandscape ? 0.6 : 1;
+  cardContainer.scale.set(cardScale);
+  cardContainer.x = (GAME_WIDTH  - GAME_WIDTH  * cardScale) / 2;
+  cardContainer.y = (GAME_HEIGHT - GAME_HEIGHT * cardScale) / 2;
+  popup.addChild(cardContainer);
 
   // White card
   const cardW = GAME_WIDTH * 0.82;
@@ -197,7 +208,7 @@ function showInstallPopup(parent: PIXI.Container, won: boolean): void {
   card.beginFill(0xffffff);
   card.drawRoundedRect(cardX, cardY, cardW, cardH, 20);
   card.endFill();
-  popup.addChild(card);
+  cardContainer.addChild(card);
 
   // Win / lose message at top of card
   const message = won
@@ -215,7 +226,7 @@ function showInstallPopup(parent: PIXI.Container, won: boolean): void {
   msgText.anchor.set(0.5, 0);
   msgText.x = GAME_WIDTH / 2;
   msgText.y = cardY + 18;
-  popup.addChild(msgText);
+  cardContainer.addChild(msgText);
 
   // App icon
   const iconTex = PIXI.Assets.get("aftergameIcon") as PIXI.Texture;
@@ -224,7 +235,7 @@ function showInstallPopup(parent: PIXI.Container, won: boolean): void {
   icon.scale.set((cardW * 0.28) / iconTex.width);
   icon.x = GAME_WIDTH / 2;
   icon.y = msgText.y + msgText.height + 14;
-  popup.addChild(icon);
+  cardContainer.addChild(icon);
 
   // App title
   const appTitle = new PIXI.Text("Playoff: Play & Earn Rewards", {
@@ -239,7 +250,7 @@ function showInstallPopup(parent: PIXI.Container, won: boolean): void {
   appTitle.anchor.set(0.5, 0);
   appTitle.x = GAME_WIDTH / 2;
   appTitle.y = icon.y + icon.height + 12;
-  popup.addChild(appTitle);
+  cardContainer.addChild(appTitle);
 
   // Close ✕ button
   const closeBtn = new PIXI.Text("✕", {
@@ -256,7 +267,7 @@ function showInstallPopup(parent: PIXI.Container, won: boolean): void {
     parent.removeChild(popup);
     popup.destroy({ children: true });
   });
-  popup.addChild(closeBtn);
+  cardContainer.addChild(closeBtn);
 
   parent.addChild(popup);
 }

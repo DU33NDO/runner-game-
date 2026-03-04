@@ -15,6 +15,7 @@ import {
   GAME_WIDTH,
   GAME_HEIGHT,
   GROUND_Y,
+  gameScale,
 } from "./constants";
 import { Player } from "./player";
 import { createScrollingBackground } from "./background";
@@ -166,38 +167,31 @@ export class Game {
       if (this.invincibleFrames <= 0) this.player.sprite.alpha = 1;
     }
 
-    // Spawn timers
-    this.obstacleTimer -= dt;
-    if (this.obstacleTimer <= 0) {
-      this.obstacles.push(spawnCone(this.gameLayer));
-      this.obstacleTimer = randRange(
-        OBSTACLE_INTERVAL_MIN,
-        OBSTACLE_INTERVAL_MAX,
-      );
-    }
+    // Spawn timers — stop spawning once the finish line is on screen
+    if (!this.finishLineSpawned) {
+      this.obstacleTimer -= dt;
+      if (this.obstacleTimer <= 0) {
+        this.obstacles.push(spawnCone(this.gameLayer));
+        this.obstacleTimer = randRange(OBSTACLE_INTERVAL_MIN, OBSTACLE_INTERVAL_MAX);
+      }
 
-    this.collectibleTimer -= dt;
-    if (this.collectibleTimer <= 0) {
-      this.collectibles.push(spawnCollectible(this.gameLayer));
-      this.collectibleTimer = randRange(
-        COLLECTIBLE_INTERVAL_MIN,
-        COLLECTIBLE_INTERVAL_MAX,
-      );
-    }
+      this.collectibleTimer -= dt;
+      if (this.collectibleTimer <= 0) {
+        this.collectibles.push(spawnCollectible(this.gameLayer));
+        this.collectibleTimer = randRange(COLLECTIBLE_INTERVAL_MIN, COLLECTIBLE_INTERVAL_MAX);
+      }
 
-    this.triangleTimer -= dt;
-    if (this.triangleTimer <= 0) {
-      this.collectibles.push(...spawnJumpCoins(this.gameLayer));
-      this.triangleTimer = randRange(
-        TRIANGLE_INTERVAL_MIN,
-        TRIANGLE_INTERVAL_MAX,
-      );
-    }
+      this.triangleTimer -= dt;
+      if (this.triangleTimer <= 0) {
+        this.collectibles.push(...spawnJumpCoins(this.gameLayer));
+        this.triangleTimer = randRange(TRIANGLE_INTERVAL_MIN, TRIANGLE_INTERVAL_MAX);
+      }
 
-    this.enemyTimer -= dt;
-    if (this.enemyTimer <= 0) {
-      this.enemies.push(spawnEnemy(this.gameLayer, this.enemySheet));
-      this.enemyTimer = randRange(ENEMY_INTERVAL_MIN, ENEMY_INTERVAL_MAX);
+      this.enemyTimer -= dt;
+      if (this.enemyTimer <= 0) {
+        this.enemies.push(spawnEnemy(this.gameLayer, this.enemySheet));
+        this.enemyTimer = randRange(ENEMY_INTERVAL_MIN, ENEMY_INTERVAL_MAX);
+      }
     }
 
     // Move objects
@@ -342,7 +336,7 @@ export class Game {
   checkCollision(player: Player, obj: GameObject, shrink = 30): boolean {
     const pb = player.getBounds();
     const ob = obj.getBounds();
-    const s = shrink;
+    const s = shrink * gameScale();
     return (
       pb.x + s < ob.x + ob.width - s &&
       pb.x + pb.width - s > ob.x + s &&
@@ -384,7 +378,7 @@ export class Game {
 
 
     c.x = GAME_WIDTH + 60;
-    this.gameLayer.addChild(c);
+    this.gameLayer.addChildAt(c, 0);
     return c;
   }
 
@@ -401,9 +395,6 @@ export class Game {
   onFinish() {
     this.state = "finished";
     this.player.stopAndStand();
-    this.clearAllObjects(this.obstacles);
-    this.clearAllObjects(this.enemies);
-    this.clearAllObjects(this.collectibles);
     this.ui.showFinish();
     this.ui.showConfetti();
     playWin();

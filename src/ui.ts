@@ -2,7 +2,7 @@ import * as PIXI from "pixi.js";
 import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from "./constants";
 import type { Game } from "./game";
 import { create3DButton } from "./ui/button";
-import { buildEndScreen } from "./ui/endScreen";
+import { buildEndScreen, showInstallPopup } from "./ui/endScreen";
 
 export class UIManager {
   parent: PIXI.Container;
@@ -136,7 +136,7 @@ export class UIManager {
     this.downloadBtn = create3DButton("Download", 140, 46);
     this.downloadBtn.x = GAME_WIDTH - 55;
     this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
-    this.downloadBtn.on("pointerdown", () => console.log("Download clicked"));
+    this.downloadBtn.on("pointerdown", () => showInstallPopup(this.parent));
     this.footerContainer.addChild(this.downloadBtn);
     this.downloadBtnBaseScale = 0.82;
 
@@ -506,12 +506,14 @@ export class UIManager {
   showEnd(score: number, won: boolean) {
     this.failContainer.visible = false;
     this.endContainer.visible = true;
+    const isLandscape = GAME_WIDTH > GAME_HEIGHT;
     this.endColumn = buildEndScreen(
       this.endContainer,
       this.endBgSprite,
       score,
       won,
       this.parent,
+      isLandscape ? 0.45 : 1,
     );
   }
 

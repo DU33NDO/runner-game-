@@ -54,7 +54,10 @@ export class Player {
   resize() {
     this.applyScale();
     const isLandscape = GAME_WIDTH > GAME_HEIGHT;
-    this.container.x = isLandscape ? 300 : 70; // ← landscape x | portrait x
+    const isPhone     = GAME_HEIGHT < 500;
+    this.container.x = !isLandscape ? 70        // portrait
+                     : isPhone      ? 300       // ← phone landscape x
+                     :                300;      // ← tablet landscape x (already fine)
     if (this.isGrounded) this.container.y = GROUND_Y + 40;
   }
 

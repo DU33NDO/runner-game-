@@ -76,6 +76,24 @@ export function createScrollingBackground(
     [bush1, 830, -170, 0.44, 1.0],
   ];
 
+  // Landscape phones (GAME_HEIGHT < 500) — tweak these values for phone landscape
+  const LANDSCAPE_PHONE_CONFIGS: DecorCfg[] = [
+    // Trees
+    [tree1, 60, -185, 1.1, 1.0],
+    [tree1, 370, -185, 1.1, 1.0],
+    [tree2, 700, -185, 1.1, 1.0],
+    [tree2, 1180, -185, 1.1, 1.0],
+    // Lamps
+    [lampTex, 150, -185, 1.1, 1.0],
+    [lampTex, 460, -185, 1.1, 1.0],
+    [lampTex, 780, -185, 1.1, 1.0],
+    // Bushes
+    [bush1, 110, -185, 0.42, 1.0],
+    [bush3, 400, -185, 0.32, 1.0],
+    [bush2, 620, -185, 0.4, 1.0],
+    [bush1, 830, -185, 0.44, 1.0],
+  ];
+
   // ── Spawn sprites (one per config slot, reused across orientations) ────────
   const decorations = PORTRAIT_CONFIGS.map(
     ([tex, x, groundYOffset, baseScale]) => {
@@ -92,12 +110,24 @@ export function createScrollingBackground(
   // ── Public API ────────────────────────────────────────────────────────────
   function resize() {
     const isLandscape = GAME_WIDTH > GAME_HEIGHT;
-    bgLayer.width = GAME_WIDTH;
-    bgLayer.height = GAME_HEIGHT;
-    bgLayer.y = isLandscape ? -20 : -20; // ← landscape y  | portrait y
-    bgLayer.tileScale.set(isLandscape ? 0.9 : 0.9); // ← landscape scale | portrait scale
+    const isPhone = GAME_HEIGHT < 500; // phones in landscape are short (<500px tall)
+    const bgOffsetY = !isLandscape ? -20 : isPhone ? -150 : -20;
+    bgLayer.y      = bgOffsetY;
+    bgLayer.width  = GAME_WIDTH;
+    bgLayer.height = GAME_HEIGHT - bgOffsetY; // extend to fill any gap from y offset
+    bgLayer.tileScale.set(
+      !isLandscape
+        ? 0.9 // portrait scale
+        : isPhone
+          ? 0.9 // ← phone landscape scale
+          : 0.9, // ← tablet landscape scale
+    );
 
-    const configs = isLandscape ? LANDSCAPE_CONFIGS : PORTRAIT_CONFIGS;
+    const configs = !isLandscape
+      ? PORTRAIT_CONFIGS
+      : isPhone
+        ? LANDSCAPE_PHONE_CONFIGS
+        : LANDSCAPE_CONFIGS;
 
     for (let i = 0; i < decorations.length; i++) {
       const [, , groundYOffset, baseScale, speedMul] = configs[i];

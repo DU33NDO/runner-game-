@@ -10,7 +10,8 @@
       "Bash(npm install:*)",
       "Bash(npx vite build)",
       "WebFetch(domain:localhost)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

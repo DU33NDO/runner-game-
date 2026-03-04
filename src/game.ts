@@ -249,7 +249,6 @@ export class Game {
       this.onFinish();
     }
 
-    this.ui.update(dt);
   };
 
   // ── Tutorial ────────────────────────────────────────────────────────────────
@@ -395,7 +394,6 @@ export class Game {
   onFinish() {
     this.state = "finished";
     this.player.stopAndStand();
-    this.ui.showFinish();
     this.ui.showConfetti();
     playWin();
     setTimeout(() => {

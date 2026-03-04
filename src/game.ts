@@ -1,20 +1,41 @@
-import * as PIXI from 'pixi.js';
+import * as PIXI from "pixi.js";
 import {
-  SCROLL_SPEED, MAX_LIVES, FINISH_DISTANCE, COLLECTIBLE_VALUE,
-  OBSTACLE_INTERVAL_MIN, OBSTACLE_INTERVAL_MAX,
-  COLLECTIBLE_INTERVAL_MIN, COLLECTIBLE_INTERVAL_MAX,
-  ENEMY_INTERVAL_MIN, ENEMY_INTERVAL_MAX,
-} from './constants';
-import { Player } from './player';
-import { createScrollingBackground } from './background';
-import { spawnCone, spawnEnemy, spawnCollectible, type GameObject } from './objects';
-import { UIManager } from './ui';
+  SCROLL_SPEED,
+  MAX_LIVES,
+  FINISH_DISTANCE,
+  COLLECTIBLE_VALUE,
+  OBSTACLE_INTERVAL_MIN,
+  OBSTACLE_INTERVAL_MAX,
+  COLLECTIBLE_INTERVAL_MIN,
+  COLLECTIBLE_INTERVAL_MAX,
+  ENEMY_INTERVAL_MIN,
+  ENEMY_INTERVAL_MAX,
+  TRIANGLE_INTERVAL_MIN,
+  TRIANGLE_INTERVAL_MAX,
+} from "./constants";
+import { Player } from "./player";
+import { createScrollingBackground } from "./background";
+import {
+  spawnCone,
+  spawnEnemy,
+  spawnCollectible,
+  spawnJumpCoins,
+  type GameObject,
+} from "./objects";
+import { UIManager } from "./ui";
 
-export type GameState = 'intro' | 'playing' | 'fail' | 'finished' | 'end';
+export type GameState =
+  | "intro"
+  | "tutorial"
+  | "tutorial_pause"
+  | "playing"
+  | "fail"
+  | "finished"
+  | "end";
 
 export class Game {
   app: PIXI.Application<HTMLCanvasElement>;
-  state: GameState = 'intro';
+  state: GameState = "intro";
 
   bgLayer: PIXI.Container;
   gameLayer: PIXI.Container;
@@ -39,12 +60,21 @@ export class Game {
   obstacleTimer = 60;
   collectibleTimer = 40;
   enemyTimer = 150;
+  triangleTimer = 200;
   invincibleFrames = 0;
+
+  // Tutorial state
+  tutorialTimer = 0;
+  tutorialCollected = 0;
+  tutorialEnemySpawned = false;
+  tutorialEnemy: GameObject | null = null;
+  tutorialStep1 = false;
+  tutorialStep2 = false;
 
   constructor(
     app: PIXI.Application<HTMLCanvasElement>,
     playerSheet: PIXI.Spritesheet,
-    enemySheet: PIXI.Spritesheet
+    enemySheet: PIXI.Spritesheet,
   ) {
     this.app = app;
     this.playerSheet = playerSheet;
@@ -66,30 +96,38 @@ export class Game {
   }
 
   start() {
-    this.bgElements = createScrollingBackground(this.bgLayer, this.app.renderer as PIXI.Renderer);
+    this.bgElements = createScrollingBackground(
+      this.bgLayer,
+      this.app.renderer as PIXI.Renderer,
+    );
     this.player = new Player(this.gameLayer, this.playerSheet);
     this.ui = new UIManager(this.uiLayer, this);
 
-    this.state = 'intro';
+    this.state = "intro";
     this.ui.showIntro();
     this.setupInput();
     this.app.ticker.add(this.update, this);
+
+    // DEV: uncomment to preview end screen immediately
+    // this.ui.showEnd(120, false);
   }
 
   setupInput() {
     const handleTap = () => {
-      if (this.state === 'intro') {
-        this.state = 'playing';
+      if (this.state === "intro") {
+        this.state = "tutorial";
         this.ui.hideIntro();
         this.player.startRunning();
-      } else if (this.state === 'playing') {
+      } else if (this.state === "tutorial_pause") {
+        this.startGameAfterTutorial();
+      } else if (this.state === "playing") {
         this.player.jump();
       }
     };
 
-    this.app.view.addEventListener('pointerdown', handleTap);
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
+    this.app.view.addEventListener("pointerdown", handleTap);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
         handleTap();
       }
@@ -97,7 +135,11 @@ export class Game {
   }
 
   update = () => {
-    if (this.state !== 'playing') return;
+    if (this.state === "tutorial") {
+      this.updateTutorial();
+      return;
+    }
+    if (this.state !== "playing") return;
 
     const dt = this.app.ticker.deltaMS / 16.67;
 
@@ -108,7 +150,8 @@ export class Game {
     // Invincibility blink
     if (this.invincibleFrames > 0) {
       this.invincibleFrames -= dt;
-      this.player.sprite.alpha = Math.sin(this.invincibleFrames * 0.5) > 0 ? 1 : 0.3;
+      this.player.sprite.alpha =
+        Math.sin(this.invincibleFrames * 0.5) > 0 ? 1 : 0.3;
       if (this.invincibleFrames <= 0) this.player.sprite.alpha = 1;
     }
 
@@ -125,6 +168,12 @@ export class Game {
       this.collectibleTimer = randRange(COLLECTIBLE_INTERVAL_MIN, COLLECTIBLE_INTERVAL_MAX);
     }
 
+    this.triangleTimer -= dt;
+    if (this.triangleTimer <= 0) {
+      this.collectibles.push(...spawnJumpCoins(this.gameLayer));
+      this.triangleTimer = randRange(TRIANGLE_INTERVAL_MIN, TRIANGLE_INTERVAL_MAX);
+    }
+
     this.enemyTimer -= dt;
     if (this.enemyTimer <= 0) {
       this.enemies.push(spawnEnemy(this.gameLayer, this.enemySheet));
@@ -132,7 +181,11 @@ export class Game {
     }
 
     // Move objects
-    for (const obj of [...this.obstacles, ...this.enemies, ...this.collectibles]) {
+    for (const obj of [
+      ...this.obstacles,
+      ...this.enemies,
+      ...this.collectibles,
+    ]) {
       if (!obj.active) continue;
       obj.container.x -= this.speed * dt;
       if (obj.enemySpeed) obj.container.x -= obj.enemySpeed * dt;
@@ -148,15 +201,14 @@ export class Game {
       }
     }
 
-    // Collision: collectibles
+    // Collision: collectibles (shrink=0 — generous hitbox for small items)
     for (const col of this.collectibles) {
-      if (col.active && this.checkCollision(this.player, col)) {
+      if (col.active && this.checkCollision(this.player, col, 0)) {
         col.active = false;
         col.container.visible = false;
         this.score += COLLECTIBLE_VALUE;
         this.ui.updateScore(this.score);
-        // Fly the collected item to the PayPal badge
-        const texKey = col.type === 'dollar' ? 'dollar' : 'paypalScore';
+        const texKey = col.type === "dollar" ? "dollar" : "paypalScore";
         this.ui.flyToScore(col.container.x, col.container.y, texKey);
       }
     }
@@ -172,6 +224,75 @@ export class Game {
     this.ui.update(dt);
   };
 
+  // ── Tutorial ────────────────────────────────────────────────────────────────
+
+  updateTutorial() {
+    const dt = this.app.ticker.deltaMS / 16.67;
+    this.tutorialTimer += dt;
+    this.distance += this.speed * dt;   // keep distance in sync
+
+    this.bgElements.update(this.speed * dt);
+    this.player.update(dt);
+
+    // Scripted ground-level collectibles (no jump needed)
+    if (!this.tutorialStep1 && this.tutorialTimer > 30) {
+      this.tutorialStep1 = true;
+      this.collectibles.push(spawnCollectible(this.gameLayer, true));
+    }
+    if (!this.tutorialStep2 && this.tutorialTimer > 100) {
+      this.tutorialStep2 = true;
+      this.collectibles.push(spawnCollectible(this.gameLayer, true));
+    }
+
+    // Move collectibles
+    for (const col of this.collectibles) {
+      if (col.active) col.container.x -= this.speed * dt;
+    }
+
+    // Collect (shrink=0 for generous hitbox)
+    for (const col of this.collectibles) {
+      if (col.active && this.checkCollision(this.player, col, 0)) {
+        col.active = false;
+        col.container.visible = false;
+        this.score += COLLECTIBLE_VALUE;
+        this.ui.updateScore(this.score);
+        this.tutorialCollected++;
+        const texKey = col.type === "dollar" ? "dollar" : "paypalScore";
+        this.ui.flyToScore(col.container.x, col.container.y, texKey);
+      }
+    }
+
+    // Spawn enemy once both collectibles collected
+    if (this.tutorialCollected >= 2 && !this.tutorialEnemySpawned) {
+      this.tutorialEnemySpawned = true;
+      this.tutorialEnemy = spawnEnemy(this.gameLayer, this.enemySheet);
+      this.enemies.push(this.tutorialEnemy);
+    }
+
+    // Move tutorial enemy and check proximity
+    if (this.tutorialEnemy && this.tutorialEnemy.active) {
+      this.tutorialEnemy.container.x -=
+        (this.speed + (this.tutorialEnemy.enemySpeed || 0)) * dt;
+
+      // Pause when enemy is about 200px from player
+      if (this.tutorialEnemy.container.x < this.player.container.x + 130) {
+        this.state = "tutorial_pause";
+        this.ui.showTutorialOverlay();
+      }
+    }
+
+    this.cleanupObjects(this.collectibles);
+  }
+
+  startGameAfterTutorial() {
+    // Enemy stays — player must jump over it immediately
+    this.ui.hideTutorialOverlay();
+    this.state = "playing";
+    this.player.jump(); // auto-jump so the player clears the frozen enemy
+  }
+
+  // ── Shared helpers ──────────────────────────────────────────────────────────
+
   cleanupObjects(objects: GameObject[]) {
     for (let i = objects.length - 1; i >= 0; i--) {
       const obj = objects[i];
@@ -184,10 +305,10 @@ export class Game {
     }
   }
 
-  checkCollision(player: Player, obj: GameObject): boolean {
+  checkCollision(player: Player, obj: GameObject, shrink = 30): boolean {
     const pb = player.getBounds();
     const ob = obj.getBounds();
-    const s = 15;
+    const s = shrink;
     return (
       pb.x + s < ob.x + ob.width - s &&
       pb.x + pb.width - s > ob.x + s &&
@@ -200,23 +321,26 @@ export class Game {
     this.lives--;
     this.ui.updateLives(this.lives);
     this.invincibleFrames = 90;
+    this.player.hitFlash();
 
     if (this.lives <= 0) {
-      this.state = 'fail';
+      this.state = "fail";
+      this.player.stopAndStand();
       this.ui.showFail();
       setTimeout(() => {
-        this.state = 'end';
-        this.ui.showEnd(this.score);
+        this.state = "end";
+        this.ui.showEnd(this.score, false);
       }, 1500);
     }
   }
 
   onFinish() {
-    this.state = 'finished';
+    this.state = "finished";
+    this.player.stopAndStand();
     this.ui.showFinish();
     setTimeout(() => {
-      this.state = 'end';
-      this.ui.showEnd(this.score);
+      this.state = "end";
+      this.ui.showEnd(this.score, true);
     }, 2000);
   }
 }

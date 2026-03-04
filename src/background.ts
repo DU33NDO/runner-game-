@@ -64,9 +64,9 @@ export function createScrollingBackground(
 
   // ── Trees — varied depth via scale and y-offset ───────────────────────────
   addDecor(tree1, 60, -170, 1.15, 1.0);
-  addDecor(tree1, 370, -170, 1.05, 1.0);
+  addDecor(tree1, 370, -170, 1.1, 1.0);
   addDecor(tree2, 700, -170, 1.1, 1.0);
-  addDecor(tree2, 1180, -170, 1.05, 1.0);
+  addDecor(tree2, 1180, -170, 1.1, 1.0);
 
   // ── Lamps — every ~300px offset from trees ────────────────────────────────
   addDecor(lampTex, 150, -170, 1.1, 1.0);

@@ -1,48 +1,8 @@
 import * as PIXI from "pixi.js";
 import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from "./constants";
 import type { Game } from "./game";
-
-function create3DButton(label: string, w: number, h: number): PIXI.Container {
-  const btn = new PIXI.Container();
-
-  const shadow = new PIXI.Graphics();
-  shadow.beginFill(0xb35900);
-  shadow.drawRoundedRect(0, 6, w, h, 12);
-  shadow.endFill();
-  btn.addChild(shadow);
-
-  const face = new PIXI.Graphics();
-  face.beginFill(0xff7b00);
-  face.drawRoundedRect(0, 0, w, h, 12);
-  face.endFill();
-  btn.addChild(face);
-
-  const highlight = new PIXI.Graphics();
-  highlight.beginFill(0xff9f40, 0.5);
-  highlight.drawRoundedRect(3, 2, w - 6, h * 0.45, 10);
-  highlight.endFill();
-  btn.addChild(highlight);
-
-  const text = new PIXI.Text(label, {
-    fontSize: Math.round(h * 0.42),
-    fontWeight: "bold",
-    fill: 0xffffff,
-    fontFamily: "Arial",
-    dropShadow: true,
-    dropShadowColor: 0x7a3d00,
-    dropShadowDistance: 1,
-    dropShadowBlur: 0,
-  });
-  text.anchor.set(0.5, 0.5);
-  text.x = w / 2;
-  text.y = h / 2;
-  btn.addChild(text);
-
-  btn.pivot.set(w / 2, h / 2);
-  btn.eventMode = "static";
-  btn.cursor = "pointer";
-  return btn;
-}
+import { create3DButton } from "./ui/button";
+import { buildEndScreen } from "./ui/endScreen";
 
 export class UIManager {
   parent: PIXI.Container;
@@ -57,7 +17,7 @@ export class UIManager {
   // Footer
   footerContainer!: PIXI.Container;
   downloadBtn!: PIXI.Container;
-  downloadBtnScale = 0.8; // start small
+  downloadBtnScale = 0.8;
   downloadBtnGrowing = true;
   downloadBtnBaseScale = 1;
 
@@ -76,8 +36,10 @@ export class UIManager {
   private tapText!: PIXI.Text;
   private failSprite!: PIXI.Sprite;
   private endBgSprite!: PIXI.Sprite;
-  private iconSprite!: PIXI.Sprite;
+  private endColumn: PIXI.Container | null = null;
   private cursorTicker: ((dt: number) => void) | null = null;
+  private tutorialOverlay: PIXI.Container | null = null;
+  private tutorialCursorTicker: ((dt: number) => void) | null = null;
 
   // HUD metrics
   private readonly HUD_ML = 8;
@@ -138,7 +100,7 @@ export class UIManager {
       fontSize: 26,
       fontWeight: "900",
       fill: 0x003087,
-      fontFamily: "Arial",
+      fontFamily: "GameFont, sans-serif",
       dropShadow: true,
       dropShadowDistance: 1,
       dropShadowBlur: 0,
@@ -156,31 +118,49 @@ export class UIManager {
     this.footerContainer = new PIXI.Container();
 
     const footerTex = PIXI.Assets.get("footer") as PIXI.Texture;
-    // Store the natural aspect ratio so height scales with width
     const footerAspect = footerTex.width / footerTex.height;
 
     this.footerSprite = new PIXI.Sprite(footerTex);
-    this.footerSprite.anchor.set(0.5, 1); // anchored bottom-center
-    this.footerSprite.width  = GAME_WIDTH;
-    this.footerSprite.height = GAME_WIDTH / footerAspect; // proportional height
+    this.footerSprite.anchor.set(0.5, 1);
+    this.footerSprite.width = GAME_WIDTH;
+    this.footerSprite.height = GAME_WIDTH / footerAspect;
     this.footerH = this.footerSprite.height;
     this.footerSprite.x = GAME_WIDTH / 2;
     this.footerSprite.y = GAME_HEIGHT;
     this.footerContainer.addChild(this.footerSprite);
 
-    // Download button — moderately sized, scales down for landscape
     this.downloadBtn = create3DButton("Download", 110, 36);
     this.downloadBtn.x = GAME_WIDTH - 70;
     this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2;
     this.downloadBtn.on("pointerdown", () => console.log("Download clicked"));
     this.footerContainer.addChild(this.downloadBtn);
 
+    // Pulse from the very start (independent of game state)
+    PIXI.Ticker.shared.add((dt: number) => {
+      if (this.downloadBtnGrowing) {
+        this.downloadBtnScale += 0.005 * dt;
+        if (this.downloadBtnScale >= 1.0) {
+          this.downloadBtnScale = 1.0;
+          this.downloadBtnGrowing = false;
+        }
+      } else {
+        this.downloadBtnScale -= 0.005 * dt;
+        if (this.downloadBtnScale <= 0.8) {
+          this.downloadBtnScale = 0.8;
+          this.downloadBtnGrowing = true;
+        }
+      }
+      this.downloadBtn.scale.set(
+        this.downloadBtnScale * this.downloadBtnBaseScale,
+      );
+    });
+
     this.parent.addChild(this.footerContainer);
   }
 
   // ── Overlays ────────────────────────────────────────────────────────────────
   private createOverlays() {
-    // Intro
+    // ── Intro ──
     this.introContainer = new PIXI.Container();
     this.introContainer.visible = false;
 
@@ -190,48 +170,42 @@ export class UIManager {
     this.introBg.endFill();
     this.introContainer.addChild(this.introBg);
 
+    this.tapText = new PIXI.Text("Tap to start\nearning!", {
+      fontSize: 20,
+      fontWeight: "bold",
+      fill: 0xffffff,
+      stroke: 0x000000,
+      strokeThickness: 3,
+      fontFamily: "GameFont, sans-serif",
+      align: "center",
+    });
+    this.tapText.anchor.set(0.5, 0.5);
+    this.tapText.x = GAME_WIDTH / 2;
+    this.tapText.y = GAME_HEIGHT / 2 - 10;
+    this.introContainer.addChild(this.tapText);
+
     this.cursorSprite = new PIXI.Sprite(
       PIXI.Assets.get("cursor") as PIXI.Texture,
     );
     this.cursorSprite.anchor.set(0.5, 0.5);
     this.cursorSprite.x = GAME_WIDTH / 2;
-    this.cursorSprite.y = GAME_HEIGHT / 2 - 50;
-    this.cursorSprite.scale.set(0.3); // start small — pulse will grow it
+    this.cursorSprite.y = this.tapText.y + 60;
+    this.cursorSprite.scale.set(0.3);
     this.introContainer.addChild(this.cursorSprite);
 
-    this.tapText = new PIXI.Text("Tap to start earning!", {
-      fontSize: 28,
-      fontWeight: "bold",
-      fill: 0xffffff,
-      stroke: 0x000000,
-      strokeThickness: 4,
-      fontFamily: "Arial",
-    });
-    this.tapText.anchor.set(0.5, 0.5);
-    this.tapText.x = GAME_WIDTH / 2;
-    this.tapText.y = GAME_HEIGHT / 2 + 30;
-    this.introContainer.addChild(this.tapText);
-
-    // Cursor pulse animation (small → big → small)
     let cursorPulseScale = 0.5;
     let cursorDir = 1;
     this.cursorTicker = (dt: number) => {
-      cursorPulseScale += 0.015 * dt * cursorDir;
-      if (cursorPulseScale >= 0.7) {
-        cursorPulseScale = 0.7;
-        cursorDir = -1;
-      }
-      if (cursorPulseScale <= 0.5) {
-        cursorPulseScale = 0.5;
-        cursorDir = 1;
-      }
+      cursorPulseScale += 0.005 * dt * cursorDir;
+      if (cursorPulseScale >= 0.7) { cursorPulseScale = 0.7; cursorDir = -1; }
+      if (cursorPulseScale <= 0.5) { cursorPulseScale = 0.5; cursorDir = 1; }
       this.cursorSprite.scale.set(cursorPulseScale);
     };
     PIXI.Ticker.shared.add(this.cursorTicker);
 
     this.parent.addChild(this.introContainer);
 
-    // Fail
+    // ── Fail ──
     this.failContainer = new PIXI.Container();
     this.failContainer.visible = false;
 
@@ -245,38 +219,31 @@ export class UIManager {
     this.failSprite.anchor.set(0.5, 0.5);
     this.failSprite.x = GAME_WIDTH / 2;
     this.failSprite.y = GAME_HEIGHT / 2 - 50;
-    this.failSprite.scale.set(0.5);
+    this.failSprite.scale.set(0); // starts at 0, animated in showFail()
     this.failContainer.addChild(this.failSprite);
 
     this.parent.addChild(this.failContainer);
 
-    // End screen
+    // ── End screen (contents built dynamically in showEnd) ──
     this.endContainer = new PIXI.Container();
     this.endContainer.visible = false;
 
     this.endBgSprite = new PIXI.Sprite(
       PIXI.Assets.get("endBackground") as PIXI.Texture,
     );
-    this.endBgSprite.width = GAME_WIDTH;
-    this.endBgSprite.height = GAME_HEIGHT;
+    this.endBgSprite.anchor.set(0.5, 0.5);
+    this.endBgSprite.x = GAME_WIDTH / 2;
+    this.endBgSprite.y = GAME_HEIGHT / 2;
+    this.endBgSprite.width = GAME_WIDTH * 1.5;
+    this.endBgSprite.height = GAME_HEIGHT * 1.5;
     this.endContainer.addChild(this.endBgSprite);
-
-    this.iconSprite = new PIXI.Sprite(
-      PIXI.Assets.get("aftergameIcon") as PIXI.Texture,
-    );
-    this.iconSprite.anchor.set(0.5, 0.5);
-    this.iconSprite.x = GAME_WIDTH / 2;
-    this.iconSprite.y = GAME_HEIGHT / 2 - 100;
-    this.iconSprite.scale.set(0.4);
-    this.endContainer.addChild(this.iconSprite);
 
     this.parent.addChild(this.endContainer);
   }
 
   // ── Resize ──────────────────────────────────────────────────────────────────
   resize() {
-    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } =
-      this;
+    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } = this;
     const centerY = HUD_MT + Math.max(heartH, headerH) / 2;
 
     this.heartsContainer.x = HUD_ML;
@@ -286,23 +253,16 @@ export class UIManager {
     this.scoreText.x = GAME_WIDTH - HUD_MR - INNER_PAD;
     this.scoreText.y = centerY;
 
-    // Footer: scale width to GAME_WIDTH, height proportional (keeps aspect ratio)
     const aspect = this.footerSprite.texture.width / this.footerSprite.texture.height;
-    this.footerSprite.width  = GAME_WIDTH;
+    this.footerSprite.width = GAME_WIDTH;
     this.footerSprite.height = GAME_WIDTH / aspect;
-    this.footerH             = this.footerSprite.height;
-    this.footerSprite.x      = GAME_WIDTH / 2;
-    this.footerSprite.y      = GAME_HEIGHT;
-    this.downloadBtn.x       = GAME_WIDTH - 70;
-    this.downloadBtn.y       = GAME_HEIGHT - this.footerH / 2;
+    this.footerH = this.footerSprite.height;
+    this.footerSprite.x = GAME_WIDTH / 2;
+    this.footerSprite.y = GAME_HEIGHT;
+    this.downloadBtn.x = GAME_WIDTH - 70;
+    this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2;
+    this.downloadBtnBaseScale = Math.min(0.75, Math.max(0.45, (GAME_HEIGHT / 800) * 0.75));
 
-    // Scale download button: smaller in landscape / small screens
-    this.downloadBtnBaseScale = Math.min(
-      0.75,
-      Math.max(0.45, (GAME_HEIGHT / 800) * 0.75),
-    );
-
-    // Overlay backgrounds
     this.introBg.clear();
     this.introBg.beginFill(0x000000, 0.3);
     this.introBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -313,17 +273,19 @@ export class UIManager {
     this.failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.failBg.endFill();
 
-    this.cursorSprite.x = GAME_WIDTH / 2;
-    this.cursorSprite.y = GAME_HEIGHT / 2 - 50;
     this.tapText.x = GAME_WIDTH / 2;
-    this.tapText.y = GAME_HEIGHT / 2 + 30;
+    this.tapText.y = GAME_HEIGHT / 2 - 10;
+    this.cursorSprite.x = GAME_WIDTH / 2;
+    this.cursorSprite.y = this.tapText.y + 60;
     this.failSprite.x = GAME_WIDTH / 2;
     this.failSprite.y = GAME_HEIGHT / 2 - 50;
 
-    this.endBgSprite.width = GAME_WIDTH;
-    this.endBgSprite.height = GAME_HEIGHT;
-    this.iconSprite.x = GAME_WIDTH / 2;
-    this.iconSprite.y = GAME_HEIGHT / 2 - 100;
+    this.endBgSprite.x = GAME_WIDTH / 2;
+    this.endBgSprite.y = GAME_HEIGHT / 2;
+    this.endBgSprite.width = GAME_WIDTH * 1.5;
+    this.endBgSprite.height = GAME_HEIGHT * 1.5;
+
+    if (this.endColumn) this.endColumn.x = GAME_WIDTH / 2;
   }
 
   // ── Badge center (for fly animation target) ──────────────────────────────────
@@ -356,13 +318,12 @@ export class UIManager {
     const tick = (dt: number) => {
       elapsed += dt / 60;
       const t = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 2); // ease-out
+      const ease = 1 - Math.pow(1 - t, 2);
 
       sprite.x = startX + dx * ease;
       sprite.y = startY + dy * ease;
-      sprite.rotation += 0.2 * dt; // spin
+      sprite.rotation += 0.2 * dt;
 
-      // Fade + shrink in the last 25%
       if (t > 0.75) {
         const fade = 1 - (t - 0.75) / 0.25;
         sprite.alpha = fade;
@@ -382,16 +343,30 @@ export class UIManager {
   showIntro() {
     this.introContainer.visible = true;
   }
+
   hideIntro() {
     this.introContainer.visible = false;
-    // Stop cursor pulse when game starts
     if (this.cursorTicker) {
       PIXI.Ticker.shared.remove(this.cursorTicker);
       this.cursorTicker = null;
     }
   }
+
+  /** fail.png animates from scale 0 → target (pop-in effect) */
   showFail() {
     this.failContainer.visible = true;
+    this.failSprite.scale.set(0);
+    const targetScale = 0.5;
+    const tick = (dt: number) => {
+      const s = this.failSprite.scale.x + 0.05 * dt;
+      if (s >= targetScale) {
+        this.failSprite.scale.set(targetScale);
+        PIXI.Ticker.shared.remove(tick);
+      } else {
+        this.failSprite.scale.set(s);
+      }
+    };
+    PIXI.Ticker.shared.add(tick);
   }
 
   showFinish() {
@@ -403,26 +378,72 @@ export class UIManager {
     this.parent.addChild(s);
   }
 
-  showEnd(score: number) {
+  showEnd(score: number, won: boolean) {
     this.failContainer.visible = false;
     this.endContainer.visible = true;
+    this.endColumn = buildEndScreen(
+      this.endContainer,
+      this.endBgSprite,
+      score,
+      won,
+      this.parent,
+    );
+  }
 
-    const scoreText = new PIXI.Text(`You earned: $${score}`, {
-      fontSize: 28,
+  showTutorialOverlay() {
+    const overlay = new PIXI.Container();
+
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0x000000, 0.55);
+    bg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    bg.endFill();
+    overlay.addChild(bg);
+
+    const text = new PIXI.Text("Jump to avoid\nenemies", {
+      fontSize: 30,
       fontWeight: "bold",
-      fill: 0x003087,
-      fontFamily: "Arial",
+      fill: 0xffffff,
+      fontFamily: "GameFont, sans-serif",
+      align: "center",
+      stroke: 0x000000,
+      strokeThickness: 4,
     });
-    scoreText.anchor.set(0.5, 0.5);
-    scoreText.x = GAME_WIDTH / 2;
-    scoreText.y = GAME_HEIGHT / 2;
-    this.endContainer.addChild(scoreText);
+    text.anchor.set(0.5, 0.5);
+    text.x = GAME_WIDTH / 2;
+    text.y = GAME_HEIGHT / 2 - 40;
+    overlay.addChild(text);
 
-    const bigBtn = create3DButton("Download Now!", 240, 56);
-    bigBtn.x = GAME_WIDTH / 2;
-    bigBtn.y = GAME_HEIGHT / 2 + 70;
-    bigBtn.on("pointerdown", () => console.log("Download clicked"));
-    this.endContainer.addChild(bigBtn);
+    const cursor = new PIXI.Sprite(PIXI.Assets.get("cursor") as PIXI.Texture);
+    cursor.anchor.set(0.5, 0.5);
+    cursor.x = GAME_WIDTH / 2;
+    cursor.y = text.y + 90;
+    cursor.scale.set(0.45);
+    overlay.addChild(cursor);
+
+    let pulseScale = 0.4;
+    let pulseDir = 1;
+    this.tutorialCursorTicker = (dt: number) => {
+      pulseScale += 0.005 * dt * pulseDir;
+      if (pulseScale >= 0.6) { pulseScale = 0.6; pulseDir = -1; }
+      if (pulseScale <= 0.4) { pulseScale = 0.4; pulseDir = 1; }
+      cursor.scale.set(pulseScale);
+    };
+    PIXI.Ticker.shared.add(this.tutorialCursorTicker);
+
+    this.parent.addChild(overlay);
+    this.tutorialOverlay = overlay;
+  }
+
+  hideTutorialOverlay() {
+    if (this.tutorialCursorTicker) {
+      PIXI.Ticker.shared.remove(this.tutorialCursorTicker);
+      this.tutorialCursorTicker = null;
+    }
+    if (this.tutorialOverlay) {
+      this.parent.removeChild(this.tutorialOverlay);
+      this.tutorialOverlay.destroy({ children: true });
+      this.tutorialOverlay = null;
+    }
   }
 
   updateLives(lives: number) {
@@ -437,23 +458,7 @@ export class UIManager {
     this.scoreText.style.fontSize = digits <= 2 ? 28 : digits <= 4 ? 20 : 14;
   }
 
-  update(dt: number) {
-    // Download button: pulse small → big → small
-    if (this.downloadBtnGrowing) {
-      this.downloadBtnScale += 0.012 * dt;
-      if (this.downloadBtnScale >= 1.0) {
-        this.downloadBtnScale = 1.0;
-        this.downloadBtnGrowing = false;
-      }
-    } else {
-      this.downloadBtnScale -= 0.012 * dt;
-      if (this.downloadBtnScale <= 0.8) {
-        this.downloadBtnScale = 0.8;
-        this.downloadBtnGrowing = true;
-      }
-    }
-    this.downloadBtn.scale.set(
-      this.downloadBtnScale * this.downloadBtnBaseScale,
-    );
+  update(_dt: number) {
+    // intentionally empty — download pulse runs in Ticker from createFooter()
   }
 }

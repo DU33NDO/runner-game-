@@ -1,24 +1,28 @@
 // Base design resolution (portrait phone)
 export const BASE_HEIGHT = 800;
-export const BASE_WIDTH  = 450;
+export const BASE_WIDTH = 450;
 
 // Live values — updated by setGameSize() on every device/orientation change
-export let GAME_WIDTH  = BASE_WIDTH;
+export let GAME_WIDTH = BASE_WIDTH;
 export let GAME_HEIGHT = BASE_HEIGHT;
-export let GROUND_Y    = 580; // recalculated as proportion of GAME_HEIGHT
+export let GROUND_Y = 580; // recalculated as proportion of GAME_HEIGHT
 
 // Physics
-export const GRAVITY    = 0.8;
-export const JUMP_FORCE = -14;
+export const GRAVITY = 0.8;
+export const JUMP_FORCE = -18;
 
 // Scrolling speed
 export const SCROLL_SPEED = 4;
 
 // Player animation frame indices (from atlas)
 export const PLAYER_ANIMS = {
-  run:  [1, 2, 3, 4],
-  idle: [6, 7, 8, 9],
-  jump: [0, 5],
+  // run: [1, 3, 4],
+  run: [11, 12, 13, 14, 15, 16],
+  idle: [7, 8, 9, 10],
+  jump: [9, 2, 6],
+  ambushed: [5],
+  stand: [9], // standing idle — adjust indices if your atlas differs
+  blink: [14], // blink cycle  — adjust indices if your atlas differs
 };
 
 // Enemy animation frame indices (from atlas)
@@ -27,23 +31,25 @@ export const ENEMY_ANIMS = {
 };
 
 // Spawn intervals (in frames at 60fps)
-export const OBSTACLE_INTERVAL_MIN  = 90;
-export const OBSTACLE_INTERVAL_MAX  = 180;
+export const OBSTACLE_INTERVAL_MIN = 90;
+export const OBSTACLE_INTERVAL_MAX = 180;
 export const COLLECTIBLE_INTERVAL_MIN = 60;
 export const COLLECTIBLE_INTERVAL_MAX = 150;
-export const ENEMY_INTERVAL_MIN     = 200;
-export const ENEMY_INTERVAL_MAX     = 400;
+export const ENEMY_INTERVAL_MIN = 200;
+export const ENEMY_INTERVAL_MAX = 400;
+export const TRIANGLE_INTERVAL_MIN = 180;
+export const TRIANGLE_INTERVAL_MAX = 350;
 
 // Game
-export const MAX_LIVES         = 3;
-export const FINISH_DISTANCE   = 8000;
+export const MAX_LIVES = 3;
+export const FINISH_DISTANCE = 8000;
 export const COLLECTIBLE_VALUE = 10;
 
 /** Call whenever the canvas dimensions change. */
 export function setGameSize(w: number, h: number) {
-  GAME_WIDTH  = w;
+  GAME_WIDTH = w;
   GAME_HEIGHT = h;
-  GROUND_Y    = Math.round(h * (580 / BASE_HEIGHT)); // keep 72.5% proportion
+  GROUND_Y = Math.round(h * (580 / BASE_HEIGHT)); // keep 72.5% proportion
 }
 
 /** Uniform scale factor relative to the base design height. */

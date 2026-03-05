@@ -9,6 +9,10 @@ export interface GameObject {
   enemySpeed?: number;
   animatedSprite?: PIXI.AnimatedSprite;
   floatTicker?: () => void;
+  /** Mutable baseline y for float-animated objects — update on resize. */
+  baseY?: number;
+  /** Re-apply scale using current gameScale() — call after orientation change. */
+  rescale?(): void;
   getBounds(): { x: number; y: number; width: number; height: number };
 }
 
@@ -25,7 +29,7 @@ export function spawnCone(parent: PIXI.Container): GameObject {
 
   // Actual cone on top
   const coneTex = PIXI.Assets.get("cone") as PIXI.Texture;
-  const coneScale = 0.55 * gameScale();
+  let coneScale = 0.55 * gameScale();
   const cone = new PIXI.Sprite(coneTex);
   cone.anchor.set(0.5, 1);
   cone.scale.set(coneScale);
@@ -55,7 +59,7 @@ export function spawnCone(parent: PIXI.Container): GameObject {
   evadeText.anchor.set(0.5, 0.5);
   evadeBtn.addChild(evadeText);
 
-  const evadeBaseY = -(coneVisualH + EVADE_H / 2 + 22);
+  let evadeBaseY = -(coneVisualH + EVADE_H / 2 + 22);
   evadeBtn.y = evadeBaseY;
   container.addChild(evadeBtn);
 
@@ -75,6 +79,14 @@ export function spawnCone(parent: PIXI.Container): GameObject {
     active: true,
     type: "cone",
     floatTicker: evadeFloatFn,
+    rescale() {
+      const sc = gameScale();
+      bgCone.scale.set(0.65 * sc);
+      coneScale = 0.55 * sc;
+      cone.scale.set(coneScale);
+      evadeBaseY = -(coneTex.height * coneScale + EVADE_H / 2 + 22);
+      evadeBtn.y = evadeBaseY;
+    },
     getBounds() {
       const w = coneTex.width * coneScale;
       const h = coneTex.height * coneScale;
@@ -100,7 +112,7 @@ export function spawnEnemy(
 
   const targetHeight = 180 * gameScale();
   const frameH = frames[0]?.height || 350;
-  const scale = targetHeight / frameH;
+  let scale = targetHeight / frameH;
   animSprite.scale.set(scale);
   animSprite.scale.x = -scale; // face left — toward the player
 
@@ -116,6 +128,11 @@ export function spawnEnemy(
     type: "enemy",
     enemySpeed: 2 + Math.random() * 2,
     animatedSprite: animSprite,
+    rescale() {
+      scale = (180 * gameScale()) / frameH;
+      animSprite.scale.set(scale);
+      animSprite.scale.x = -scale;
+    },
     getBounds() {
       const w = (frames[0]?.width || 180) * scale * 0.7;
       const h = frameH * scale * 0.8;
@@ -138,7 +155,9 @@ export function spawnCollectible(
   const tex = PIXI.Assets.get(texKey) as PIXI.Texture;
   const sprite = new PIXI.Sprite(tex);
   sprite.anchor.set(0.5, 0.5);
-  sprite.scale.set(isDollar ? 0.09 : 0.095);
+  const baseScale = isDollar ? 0.09 : 0.095;
+  let spriteScale = baseScale * gameScale();
+  sprite.scale.set(spriteScale);
 
   const container = new PIXI.Container();
   container.addChild(sprite);
@@ -148,12 +167,12 @@ export function spawnCollectible(
   container.y = airborne ? GROUND_Y - 140 - Math.random() * 80 : GROUND_Y - 50;
   parent.addChild(container);
 
-  const baseY = container.y;
+  const floatAnim = { baseY: container.y };
   let floatTime = Math.random() * Math.PI * 2;
 
   const floatFn = () => {
     floatTime += 0.05;
-    container.y = baseY + Math.sin(floatTime) * 8;
+    container.y = floatAnim.baseY + Math.sin(floatTime) * 8;
   };
   PIXI.Ticker.shared.add(floatFn);
 
@@ -162,10 +181,15 @@ export function spawnCollectible(
     active: true,
     type: isDollar ? "dollar" : "paypalMoney",
     floatTicker: floatFn,
+    get baseY() { return floatAnim.baseY; },
+    set baseY(v: number) { floatAnim.baseY = v; },
+    rescale() {
+      spriteScale = baseScale * gameScale();
+      sprite.scale.set(spriteScale);
+    },
     getBounds() {
-      const s = isDollar ? 0.09 : 0.095;
-      const w = tex.width * s;
-      const h = tex.height * s;
+      const w = tex.width * spriteScale;
+      const h = tex.height * spriteScale;
       return {
         x: container.x - w / 2,
         y: container.y - h / 2,
@@ -203,11 +227,11 @@ export function spawnJumpCoins(parent: PIXI.Container): GameObject[] {
     const isDollar = Math.random() > 0.4;
     const texKey = isDollar ? "dollar" : "paypalMoney";
     const tex = PIXI.Assets.get(texKey) as PIXI.Texture;
-    const s = isDollar ? 0.10 : 0.10;
+    let coinScale = 0.10 * sc;
 
     const sprite = new PIXI.Sprite(tex);
     sprite.anchor.set(0.5, 0.5);
-    sprite.scale.set(s);
+    sprite.scale.set(coinScale);
 
     const container = new PIXI.Container();
     container.addChild(sprite);
@@ -215,23 +239,28 @@ export function spawnJumpCoins(parent: PIXI.Container): GameObject[] {
     container.y = GROUND_Y - heightAboveGround;
     parent.addChild(container);
 
-    const baseY = container.y;
+    const floatAnim = { baseY: container.y };
     let floatTime = Math.random() * Math.PI * 2;
     const floatFn = () => {
       floatTime += 0.05;
-      container.y = baseY + Math.sin(floatTime) * 7;
+      container.y = floatAnim.baseY + Math.sin(floatTime) * 7;
     };
     PIXI.Ticker.shared.add(floatFn);
-
-    const w = tex.width * s;
-    const h = tex.height * s;
 
     coins.push({
       container,
       active: true,
       type: isDollar ? "dollar" : "paypalMoney",
       floatTicker: floatFn,
+      get baseY() { return floatAnim.baseY; },
+      set baseY(v: number) { floatAnim.baseY = v; },
+      rescale() {
+        coinScale = 0.10 * gameScale();
+        sprite.scale.set(coinScale);
+      },
       getBounds() {
+        const w = tex.width * coinScale;
+        const h = tex.height * coinScale;
         return {
           x: container.x - w / 2,
           y: container.y - h / 2,

@@ -29,6 +29,13 @@ export const ENEMY_INTERVAL_MAX = 400;
 export const TRIANGLE_INTERVAL_MIN = 180;
 export const TRIANGLE_INTERVAL_MAX = 350;
 
+// Store URL — platform-detected at runtime
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const STORE_URL = _isIOS
+  ? 'https://apps.apple.com/ru/app/id6444492155'
+  : 'https://play.google.com/store/apps/details?id=ae.goragaming.playoff.blocks.game.make.earn.money.rewarded';
+
 // Game
 export const MAX_LIVES = 3;
 export const FINISH_DISTANCE = 4000;

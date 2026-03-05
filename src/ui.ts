@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES } from "./constants";
+import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES, STORE_URL } from "./constants";
 import type { Game } from "./game";
 import { create3DButton } from "./ui/button";
 import { buildEndScreen, showInstallPopup } from "./ui/endScreen";
@@ -142,7 +142,12 @@ export class UIManager {
     this.downloadBtn = create3DButton("Download", 140, 46);
     this.downloadBtn.x = GAME_WIDTH - 55;
     this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
-    this.downloadBtn.on("pointerdown", () => showInstallPopup(this.parent));
+    this.downloadBtn.on("pointerdown", () =>
+      window.open(
+        STORE_URL,
+        "https://play.google.com/store/apps/details?id=ae.goragaming.playoff.blocks.game.make.earn.money.rewarded",
+      ),
+    );
     this.footerContainer.addChild(this.downloadBtn);
     this.downloadBtnBaseScale = 0.82;
 
@@ -207,8 +212,14 @@ export class UIManager {
     let cursorDir = 1;
     this.cursorTicker = (dt: number) => {
       cursorPulseScale += 0.005 * dt * cursorDir;
-      if (cursorPulseScale >= 0.7) { cursorPulseScale = 0.7; cursorDir = -1; }
-      if (cursorPulseScale <= 0.5) { cursorPulseScale = 0.5; cursorDir = 1; }
+      if (cursorPulseScale >= 0.7) {
+        cursorPulseScale = 0.7;
+        cursorDir = -1;
+      }
+      if (cursorPulseScale <= 0.5) {
+        cursorPulseScale = 0.5;
+        cursorDir = 1;
+      }
       this.cursorSprite.scale.set(cursorPulseScale);
     };
     PIXI.Ticker.shared.add(this.cursorTicker);
@@ -263,7 +274,8 @@ export class UIManager {
   }
 
   private resizeHUD() {
-    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } = this;
+    const { HUD_ML, HUD_MR, HUD_MT, INNER_PAD, headerW, headerH, heartH } =
+      this;
     const centerY = HUD_MT + Math.max(heartH, headerH) / 2;
 
     this.heartsContainer.x = HUD_ML;
@@ -277,9 +289,7 @@ export class UIManager {
   private resizeFooter(isLandscape: boolean) {
     const aspect =
       this.footerSprite.texture.width / this.footerSprite.texture.height;
-    const footerH = isLandscape
-      ? GAME_HEIGHT * 0.18
-      : GAME_WIDTH / aspect;
+    const footerH = isLandscape ? GAME_HEIGHT * 0.18 : GAME_WIDTH / aspect;
     const footerW = isLandscape ? footerH * aspect : GAME_WIDTH;
 
     this.footerSprite.width = footerW;
@@ -320,7 +330,9 @@ export class UIManager {
     this.failBg.drawRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.failBg.endFill();
 
-    this.tapText.text = isLandscape ? "Tap to start earning!" : "Tap to start\nearning!";
+    this.tapText.text = isLandscape
+      ? "Tap to start earning!"
+      : "Tap to start\nearning!";
     this.tapText.style.fontSize = isLandscape ? 50 : 20;
     this.tapText.x = GAME_WIDTH / 2;
     this.tapText.y = GAME_HEIGHT / 2 - 10;
@@ -335,7 +347,17 @@ export class UIManager {
     this.endBgSprite.width = GAME_WIDTH * 1.5;
     this.endBgSprite.height = GAME_HEIGHT * 1.5;
 
-    if (this.endColumn) this.endColumn.x = GAME_WIDTH / 2;
+    if (this.endColumn) {
+      const unscaledW = this.endColumn.width  / this.endColumn.scale.x;
+      const unscaledH = this.endColumn.height / this.endColumn.scale.x;
+      const sc = Math.min(1.0,
+        (GAME_WIDTH  * 0.90) / unscaledW,
+        (GAME_HEIGHT * 0.88) / unscaledH,
+      );
+      this.endColumn.scale.set(sc);
+      this.endColumn.x = GAME_WIDTH / 2;
+      this.endColumn.y = Math.round((GAME_HEIGHT - this.endColumn.height) / 2);
+    }
   }
 
   // ── Badge center (for fly animation target) ──────────────────────────────────

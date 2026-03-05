@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { ASSETS, enemyPlistRaw } from './assets';
-import { GAME_WIDTH, GAME_HEIGHT, setGameSize } from './constants';
+import { GAME_WIDTH, GAME_HEIGHT, GROUND_Y, setGameSize } from './constants';
 import { createSpritesheetFromPlist } from './spritesheet';
 import { Game } from './game';
 
@@ -29,6 +29,9 @@ async function init() {
     const w = container.clientWidth  || GAME_WIDTH;
     const h = container.clientHeight || GAME_HEIGHT;
 
+    // Save old ground position before update so we can shift live objects
+    const prevGroundY = GROUND_Y;
+
     // Update the global size constants first so all components read the new values
     setGameSize(w, h);
 
@@ -36,7 +39,7 @@ async function init() {
     app.renderer.resize(w, h);
 
     // Reposition all game elements to the new dimensions
-    game?.resize();
+    game?.resize(GROUND_Y - prevGroundY);
   }
 
   const ro = new ResizeObserver(resize);

@@ -55,6 +55,14 @@ for (const match of unique) {
 
 fs.writeFileSync(htmlPath, html, 'utf8');
 
+// Rename to index.html so any hosting platform (Vercel, Netlify, GitHub Pages…)
+// serves it correctly by default.
+const indexPath = path.join(path.dirname(htmlPath), 'index.html');
+if (htmlPath !== indexPath) {
+  fs.renameSync(htmlPath, indexPath);
+  console.log(`\nRenamed → dist/index.html`);
+}
+
 const newSize = Buffer.byteLength(html, 'utf8');
 console.log(`\nDone. ${replaced} image(s) converted.`);
 console.log(`  Before: ${(originalSize / 1024).toFixed(0)} KB`);

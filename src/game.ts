@@ -101,31 +101,16 @@ export class Game {
 
   resize(groundYDelta = 0) {
     this.bgElements?.resize();
+
+    // Capture player X before resize so we can compute the horizontal shift
+    const oldPlayerX = this.player?.container.x ?? 0;
     this.player?.resize();
+    const playerXDelta = (this.player?.container.x ?? 0) - oldPlayerX;
+
     this.ui?.resize();
 
-    // If orientation changes before gameplay, clear tutorial objects so they
-    // respawn at the correct new GROUND_Y on the next tutorial tick.
-    if (this.state === 'tutorial' || this.state === 'tutorial_pause') {
-      this.clearAllObjects(this.collectibles);
-      this.clearAllObjects(this.enemies);
-      this.tutorialTimer = 0;
-      this.tutorialCollected = 0;
-      this.tutorialEnemySpawned = false;
-      this.tutorialEnemy = null;
-      this.tutorialStep1 = false;
-      this.tutorialStep2 = false;
-      this.score = 0;
-      this.ui.updateScore(0);
-      if (this.state === 'tutorial_pause') {
-        this.state = 'tutorial';
-        this.ui.hideTutorialOverlay();
-      }
-      return;
-    }
-
-    // During active gameplay, shift and rescale all live objects after an
-    // orientation change so they sit at the correct height and size.
+    // Shift and rescale all live objects after an orientation change so they
+    // sit at the correct height and size (works for tutorial and gameplay).
     if (groundYDelta !== 0) {
       for (const obj of [...this.obstacles, ...this.enemies, ...this.collectibles]) {
         if (!obj.active) continue;
@@ -140,6 +125,23 @@ export class Game {
         this.finishLineContainer.y =
           (GROUND_Y - 20) - this.finishLineCreationGroundY * scaleRatio;
       }
+    }
+
+    // During tutorial the player X shifts between portrait (70) and landscape
+    // (300). Shift all tutorial objects by the same delta so collectibles and
+    // the enemy stay in the correct relative position to the player.
+    // Without this, collectibles can end up behind the player and never be
+    // collected, locking the tutorial in an infinite loop.
+    if (playerXDelta !== 0 && (this.state === 'tutorial' || this.state === 'tutorial_pause')) {
+      for (const obj of [...this.enemies, ...this.collectibles]) {
+        if (obj.active) obj.container.x += playerXDelta;
+      }
+    }
+
+    // Rebuild the overlay so it fills the new screen dimensions.
+    if (this.state === 'tutorial_pause') {
+      this.ui.hideTutorialOverlay();
+      this.ui.showTutorialOverlay();
     }
   }
 

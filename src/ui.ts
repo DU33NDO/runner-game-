@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES, STORE_URL } from "./constants";
+import { GAME_WIDTH, GAME_HEIGHT, MAX_LIVES, openStore } from "./constants";
 import type { Game } from "./game";
 import { create3DButton } from "./ui/button";
 import { buildEndScreen, showInstallPopup } from "./ui/endScreen";
@@ -142,9 +142,7 @@ export class UIManager {
     this.downloadBtn = create3DButton("Download", 140, 46);
     this.downloadBtn.x = GAME_WIDTH - 55;
     this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
-    this.downloadBtn.on("pointerdown", () =>
-      window.open(STORE_URL, "_blank"),
-    );
+    this.downloadBtn.on("pointerdown", () => openStore());
     this.footerContainer.addChild(this.downloadBtn);
     this.downloadBtnBaseScale = 0.82;
 
@@ -426,10 +424,12 @@ export class UIManager {
 
   showFail() {
     this.failContainer.visible = true;
+    this.failContainer.alpha = 0;
     this.failSprite.scale.set(0);
     const targetScale = 0.5;
     const tick = (dt: number) => {
-      const s = this.failSprite.scale.x + 0.05 * dt;
+      this.failContainer.alpha = Math.min(1, this.failContainer.alpha + 0.03 * dt);
+      const s = this.failSprite.scale.x + 0.025 * dt;
       if (s >= targetScale) {
         this.failSprite.scale.set(targetScale);
         PIXI.Ticker.shared.remove(tick);
@@ -478,6 +478,12 @@ export class UIManager {
   showEnd(score: number, won: boolean) {
     this.failContainer.visible = false;
     this.endContainer.visible = true;
+    this.endContainer.alpha = 0;
+    const fadeTick = (dt: number) => {
+      this.endContainer.alpha = Math.min(1, this.endContainer.alpha + 0.025 * dt);
+      if (this.endContainer.alpha >= 1) PIXI.Ticker.shared.remove(fadeTick);
+    };
+    PIXI.Ticker.shared.add(fadeTick);
     const isLandscape = GAME_WIDTH > GAME_HEIGHT;
     this.endColumn = buildEndScreen(
       this.endContainer,

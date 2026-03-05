@@ -36,6 +36,24 @@ export const STORE_URL = _isIOS
   ? 'https://apps.apple.com/ru/app/id6444492155'
   : 'https://play.google.com/store/apps/details?id=ae.goragaming.playoff.blocks.game.make.earn.money.rewarded';
 
+/** Open the store URL using the best available method for the current context.
+ *  - MRAID (in-app ads): uses mraid.open() which is intercepted by the ad SDK
+ *  - Fallback: location.href (works when the page is the top-level document)
+ */
+export function openStore(): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mraid = (window as any).mraid;
+  if (mraid) {
+    if (mraid.getState() === 'loading') {
+      mraid.addEventListener('ready', () => mraid.open(STORE_URL));
+    } else {
+      mraid.open(STORE_URL);
+    }
+  } else {
+    location.href = STORE_URL;
+  }
+}
+
 // Game
 export const MAX_LIVES = 3;
 export const FINISH_DISTANCE = 4000;

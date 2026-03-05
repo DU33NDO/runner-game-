@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { GAME_WIDTH, GAME_HEIGHT, STORE_URL } from "../constants";
+import { GAME_WIDTH, GAME_HEIGHT, openStore } from "../constants";
 import { create3DButton } from "./button";
 
 /**
@@ -171,7 +171,7 @@ export function buildEndScreen(
 
   installBtn.on("pointerdown", () => {
     PIXI.Ticker.shared.remove(btnTick);
-    window.open(STORE_URL, '_blank');
+    openStore();
   });
 
   return column;

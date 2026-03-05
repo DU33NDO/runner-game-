@@ -11,16 +11,18 @@ import { setMuted } from './sound';
 async function init() {
   const container = document.getElementById('game-container')!;
 
+  const dpr = window.devicePixelRatio || 1;
   const app = new PIXI.Application<HTMLCanvasElement>({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     backgroundColor: 0xdde4cc,
     antialias: true,
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
-    autoDensity: true,
+    resolution: dpr,
   });
 
   container.appendChild(app.view);
+  // Let CSS fill the container; the canvas buffer is already dpr× larger,
+  // so the browser maps it 1:1 to physical screen pixels — no upscaling blur.
   app.view.style.width  = '100%';
   app.view.style.height = '100%';
 

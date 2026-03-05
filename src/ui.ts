@@ -424,11 +424,10 @@ export class UIManager {
 
   showFail() {
     this.failContainer.visible = true;
-    this.failContainer.alpha = 0;
+    this.failContainer.alpha = 1;
     this.failSprite.scale.set(0);
     const targetScale = 0.5;
     const tick = (dt: number) => {
-      this.failContainer.alpha = Math.min(1, this.failContainer.alpha + 0.03 * dt);
       const s = this.failSprite.scale.x + 0.025 * dt;
       if (s >= targetScale) {
         this.failSprite.scale.set(targetScale);

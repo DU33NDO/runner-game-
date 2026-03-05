@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { GAME_WIDTH, GROUND_Y, ENEMY_ANIMS, gameScale } from "./constants";
+import { GAME_WIDTH, GAME_HEIGHT, GROUND_Y, ENEMY_ANIMS, gameScale } from "./constants";
 import { getAnimFrames } from "./spritesheet";
 
 export interface GameObject {
@@ -59,6 +59,8 @@ export function spawnCone(parent: PIXI.Container): GameObject {
   evadeText.anchor.set(0.5, 0.5);
   evadeBtn.addChild(evadeText);
 
+  const evadeBtnScale = () => GAME_WIDTH > GAME_HEIGHT ? 0.7 : 1;
+  evadeBtn.scale.set(evadeBtnScale());
   let evadeBaseY = -(coneVisualH + EVADE_H / 2 + 22);
   evadeBtn.y = evadeBaseY;
   container.addChild(evadeBtn);
@@ -84,6 +86,7 @@ export function spawnCone(parent: PIXI.Container): GameObject {
       bgCone.scale.set(0.65 * sc);
       coneScale = 0.55 * sc;
       cone.scale.set(coneScale);
+      evadeBtn.scale.set(evadeBtnScale());
       evadeBaseY = -(coneTex.height * coneScale + EVADE_H / 2 + 22);
       evadeBtn.y = evadeBaseY;
     },

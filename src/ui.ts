@@ -143,10 +143,7 @@ export class UIManager {
     this.downloadBtn.x = GAME_WIDTH - 55;
     this.downloadBtn.y = GAME_HEIGHT - this.footerH / 2 + 5;
     this.downloadBtn.on("pointerdown", () =>
-      window.open(
-        STORE_URL,
-        "https://play.google.com/store/apps/details?id=ae.goragaming.playoff.blocks.game.make.earn.money.rewarded",
-      ),
+      window.open(STORE_URL, "_blank"),
     );
     this.footerContainer.addChild(this.downloadBtn);
     this.downloadBtnBaseScale = 0.82;

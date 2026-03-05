@@ -74,7 +74,7 @@ export class Player {
   jump() {
     if (!this.isGrounded || !this.isRunning || this.isDamaged) return;
     this.isGrounded = false;
-    this.velocityY = GAME_WIDTH < GAME_HEIGHT ? JUMP_FORCE * 1.15 : JUMP_FORCE;
+    this.velocityY = GAME_WIDTH < GAME_HEIGHT ? JUMP_FORCE * 1.15 : JUMP_FORCE * 0.85;
     this.sprite.textures = this.jumpFrames;
     this.sprite.animationSpeed = 0.15;
     this.sprite.loop = false;

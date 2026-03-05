@@ -9,10 +9,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.join(__dirname, '../dist/game.html');
+const htmlPath = path.join(__dirname, '../dist/index.html');
 
 if (!fs.existsSync(htmlPath)) {
-  console.error('dist/game.html not found — run `npm run build` first.');
+  console.error('dist/index.html not found — run `npm run build` first.');
   process.exit(1);
 }
 
@@ -55,13 +55,6 @@ for (const match of unique) {
 
 fs.writeFileSync(htmlPath, html, 'utf8');
 
-// Rename to index.html so any hosting platform (Vercel, Netlify, GitHub Pages…)
-// serves it correctly by default.
-const indexPath = path.join(path.dirname(htmlPath), 'index.html');
-if (htmlPath !== indexPath) {
-  fs.renameSync(htmlPath, indexPath);
-  console.log(`\nRenamed → dist/index.html`);
-}
 
 const newSize = Buffer.byteLength(html, 'utf8');
 console.log(`\nDone. ${replaced} image(s) converted.`);

@@ -10,7 +10,7 @@ export default defineConfig({
     cssCodeSplit: false,
     target: 'es2020',
     rollupOptions: {
-      input: 'game.html',
+      input: 'index.html',
     },
   },
   server: {

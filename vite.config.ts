@@ -9,6 +9,9 @@ export default defineConfig({
     assetsInlineLimit: 100000000,
     cssCodeSplit: false,
     target: 'es2020',
+    rollupOptions: {
+      input: 'game.html',
+    },
   },
   server: {
     open: true,

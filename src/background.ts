@@ -145,7 +145,11 @@ export function createScrollingBackground(
 
     for (const dec of decorations) {
       dec.sprite.x -= scrollDelta * dec.speedMul;
-      if (dec.sprite.x < -100) dec.sprite.x += GAME_WIDTH + 200;
+      // Wrap only when the sprite is fully off the left edge, and respawn
+      // far enough off the right edge so the spawn point is never visible.
+      if (dec.sprite.x < -(dec.sprite.width / 2 + 50)) {
+        dec.sprite.x += GAME_WIDTH + 400;
+      }
     }
   }
 

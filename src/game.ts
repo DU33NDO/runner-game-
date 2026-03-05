@@ -172,8 +172,14 @@ export class Game {
       } else if (this.state === "tutorial_pause") {
         this.startGameAfterTutorial();
       } else if (this.state === "playing") {
-        this.player.jump();
-        playJump();
+        // Disable jumping when the finish line is close so the player
+        // always crosses it grounded rather than hanging in the air.
+        const nearFinish = this.finishLineContainer !== null &&
+          this.finishLineContainer.x < this.player.container.x + 500;
+        if (!nearFinish) {
+          this.player.jump();
+          playJump();
+        }
       }
     };
 
@@ -207,12 +213,15 @@ export class Game {
       if (this.invincibleFrames <= 0) this.player.sprite.alpha = 1;
     }
 
-    // Spawn timers — stop spawning once the finish line is on screen
+    // Spawn timers — stop spawning once the finish line is on screen.
+    // Obstacles stop earlier so none are on-screen when the finish line appears.
     if (!this.finishLineSpawned) {
-      this.obstacleTimer -= dt;
-      if (this.obstacleTimer <= 0) {
-        this.obstacles.push(spawnCone(this.gameLayer));
-        this.obstacleTimer = randRange(OBSTACLE_INTERVAL_MIN, OBSTACLE_INTERVAL_MAX);
+      if (this.distance < FINISH_DISTANCE - 1200) {
+        this.obstacleTimer -= dt;
+        if (this.obstacleTimer <= 0) {
+          this.obstacles.push(spawnCone(this.gameLayer));
+          this.obstacleTimer = randRange(OBSTACLE_INTERVAL_MIN, OBSTACLE_INTERVAL_MAX);
+        }
       }
 
       this.collectibleTimer -= dt;
@@ -227,10 +236,12 @@ export class Game {
         this.triangleTimer = randRange(TRIANGLE_INTERVAL_MIN, TRIANGLE_INTERVAL_MAX);
       }
 
-      this.enemyTimer -= dt;
-      if (this.enemyTimer <= 0) {
-        this.enemies.push(spawnEnemy(this.gameLayer, this.enemySheet));
-        this.enemyTimer = randRange(ENEMY_INTERVAL_MIN, ENEMY_INTERVAL_MAX);
+      if (this.distance < FINISH_DISTANCE - 1200) {
+        this.enemyTimer -= dt;
+        if (this.enemyTimer <= 0) {
+          this.enemies.push(spawnEnemy(this.gameLayer, this.enemySheet));
+          this.enemyTimer = randRange(ENEMY_INTERVAL_MIN, ENEMY_INTERVAL_MAX);
+        }
       }
     }
 

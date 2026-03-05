@@ -9,10 +9,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const htmlPath = path.join(__dirname, '../dist/index.html');
+const htmlPath = path.join(__dirname, '../dist/game.html');
 
 if (!fs.existsSync(htmlPath)) {
-  console.error('dist/index.html not found — run `npm run build` first.');
+  console.error('dist/game.html not found — run `npm run build` first.');
   process.exit(1);
 }
 

@@ -38,7 +38,7 @@ for (const match of unique) {
   const pngBase64 = match[1];
   const pngBuf = Buffer.from(pngBase64, 'base64');
   try {
-    const webpBuf = await sharp(pngBuf).webp({ quality: 82 }).toBuffer();
+    const webpBuf = await sharp(pngBuf).webp({ quality: 90 }).toBuffer();
     const webpBase64 = webpBuf.toString('base64');
     const saving = pngBuf.length - webpBuf.length;
     console.log(`  PNG ${(pngBuf.length / 1024).toFixed(0)}KB → WebP ${(webpBuf.length / 1024).toFixed(0)}KB  (saved ${(saving / 1024).toFixed(0)}KB)`);

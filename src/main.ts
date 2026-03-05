@@ -16,7 +16,8 @@ async function init() {
     height: GAME_HEIGHT,
     backgroundColor: 0xdde4cc,
     antialias: true,
-    resolution: 1,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    autoDensity: true,
   });
 
   container.appendChild(app.view);
